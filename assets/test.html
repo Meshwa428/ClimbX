@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Order & Chaos - Smooth Drift</title>
+  <style>
+    /* Reset */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f7f6f2; /* Warm off-white */
+      color: #111;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+
+    /* Header */
+    header {
+      padding: 40px 60px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      z-index: 100;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-links {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 10px;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: #111;
+      font-size: 1rem;
+    }
+
+    /* Animation Canvas */
+    .canvas {
+      position: relative;
+      width: 100%;
+      flex-grow: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Squircle Card Base */
+    .squircle-card {
+      position: absolute;
+      width: 260px;   /* Perfect square for the squircle look */
+      height: 260px;
+      border-radius: 64px; /* Deep rounded corners */
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+      will-change: transform;
+      
+      /* Slower, independent animation */
+      animation-duration: 24s;
+      animation-iteration-count: infinite;
+      animation-timing-function: ease-in-out;
+      animation-direction: alternate; /* Creates a smooth back-and-forth drift */
+    }
+
+    .card-num {
+      font-size: 0.9rem;
+      font-weight: 500;
+      opacity: 0.6;
+    }
+
+    .card-title {
+      font-size: 1.6rem;
+      font-weight: 400;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+
+    /* Distinct Card Styles */
+    .c1 { background: #e3e4e0; color: #111; z-index: 3; animation-name: drift-1; }
+    .c2 { background: #1a1a1a; color: #fff; z-index: 5; animation-name: drift-2; }
+    .c3 { background: #d5d6d2; color: #111; z-index: 2; animation-name: drift-3; }
+    .c4 { background: #2a2a2a; color: #fff; z-index: 4; animation-name: drift-4; }
+    .c5 { background: #f0efe9; color: #222; z-index: 1; animation-name: drift-5; }
+
+    /* 
+      Drifting Keyframes 
+      Focusing strictly on X/Y translation and subtle scaling.
+      NO rotation. 
+    */
+    @keyframes drift-1 {
+      0%   { transform: translate(-250px, -120px) scale(0.9); }
+      50%  { transform: translate(-150px, -180px) scale(1); }
+      100% { transform: translate(-50px, -100px) scale(0.95); }
+    }
+
+    @keyframes drift-2 {
+      0%   { transform: translate(50px, -50px) scale(1.05); }
+      50%  { transform: translate(-50px, 80px) scale(0.95); }
+      100% { transform: translate(120px, 20px) scale(1.1); }
+    }
+
+    @keyframes drift-3 {
+      0%   { transform: translate(220px, -160px) scale(0.85); }
+      50%  { transform: translate(280px, -80px) scale(0.9); }
+      100% { transform: translate(160px, -120px) scale(0.8); }
+    }
+
+    @keyframes drift-4 {
+      0%   { transform: translate(-100px, 180px) scale(0.95); }
+      50%  { transform: translate(-220px, 120px) scale(0.85); }
+      100% { transform: translate(-140px, 220px) scale(1); }
+    }
+
+    @keyframes drift-5 {
+      0%   { transform: translate(180px, 160px) scale(0.9); }
+      50%  { transform: translate(80px, 220px) scale(1); }
+      100% { transform: translate(240px, 100px) scale(0.95); }
+    }
+
+    /* Footer */
+    footer {
+      padding: 40px 60px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      z-index: 100;
+    }
+
+    .footer-tabs {
+      display: flex;
+      gap: 50px;
+      font-size: 1rem;
+      border-bottom: 1px solid #111;
+      padding-bottom: 15px;
+    }
+
+    .tab {
+      color: #999;
+    }
+
+    .tab.active {
+      color: #111;
+      font-weight: 500;
+    }
+
+    .footer-text {
+      max-width: 380px;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Order & Chaos</h1>
+    <nav class="nav-links">
+      <a href="#">Reason</a>
+      <a href="#">Samples</a>
+    </nav>
+  </header>
+
+  <main class="canvas">
+    <div class="squircle-card c1">
+      <span class="card-num">01</span>
+      <h2 class="card-title">Editorial</h2>
+    </div>
+
+    <div class="squircle-card c2">
+      <span class="card-num">02</span>
+      <h2 class="card-title">Dark Mode</h2>
+    </div>
+
+    <div class="squircle-card c3">
+      <span class="card-num">03</span>
+      <h2 class="card-title">Grid Bounds</h2>
+    </div>
+
+    <div class="squircle-card c4">
+      <span class="card-num">04</span>
+      <h2 class="card-title">Tension</h2>
+    </div>
+
+    <div class="squircle-card c5">
+      <span class="card-num">05</span>
+      <h2 class="card-title">Minimal</h2>
+    </div>
+  </main>
+
+  <footer>
+    <div class="footer-tabs">
+      <span class="tab">01</span>
+      <span class="tab">02</span>
+      <span class="tab active">03</span>
+    </div>
+    <p class="footer-text">
+      Order & Chaos is a series of experimental works curated to push the bounds of rigid layouts, maintaining visual tension through motion.
+    </p>
+  </footer>
+
+</body>
+</html>

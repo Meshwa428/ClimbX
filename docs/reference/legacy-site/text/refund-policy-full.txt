@@ -1,0 +1,51 @@
+min-h-full flex flex-col bg-[#0A0A0A] text-white
+
+404: This page could not be found.
+
+This page could not be found.
+
+Effective Date: May 17, 2026
+
+Service-Based Nature of Business
+
+ClimbX Digital provides services including:
+
+Project Cancellation by Client
+
+Advance payments are generally non-refundable.
+
+Work completed until cancellation will be chargeable.
+
+Third-party expenses are non-refundable.
+
+Non-refundable services include:
+
+Advertising Budget Policy
+
+Delayed Response or Inactivity
+
+Termination by ClimbX Digital
+
+Website Development Milestones
+
+Partial refunds may be considered only before project initiation.
+
+Advertising spends on Meta, Google, YouTube, influencers, and promotions are non-refundable once campaigns begin.
+
+Clients must provide at least 7 days prior notice before cancellation of recurring services.
+
+Projects inactive for more than 30 days may be paused and reactivation charges may apply.
+
+Services may be terminated due to:
+
+Illegal or unethical activities
+
+Unauthorized chargebacks after successful service delivery may lead to legal action and permanent service suspension.
+
+Nagpur, Maharashtra, India
+
+text-[#F5A623] hover:underline
+
+mailto:climbxdigital@gmail.com
+
+width=device-width, initial-scale=1

@@ -1,0 +1,123 @@
+@import "tailwindcss";
+/* Lenis' own stylesheet — required for the smooth-scroll wrapper to size correctly */
+@import "lenis/dist/lenis.css";
+
+/* docs are prose, not markup — auto-scanning them minted junk utilities from code samples */
+@source not "../docs";
+
+/* Brand tokens — Design.md §1 (source of truth: assets/Brand fonts and colour.pdf) */
+:root {
+  --brand-orange: #f5a623;
+  --deep-amber: #e08a00;
+  --brand-black: #1a1a1a;
+  --pure-white: #ffffff;
+  --light-gold: #ffc84a;
+  --burnt-orange: #c97100;
+  --soft-black: #2c2c2c;
+  --off-white: #f5f5f5;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@theme inline {
+  --color-brand: var(--brand-orange);
+  --color-amber: var(--deep-amber);
+  --color-ink: var(--brand-black);
+  --color-gold: var(--light-gold);
+  --color-burnt: var(--burnt-orange);
+  --color-graphite: var(--soft-black);
+  --color-cloud: var(--off-white);
+
+  --font-display: var(--font-raleway);
+  --font-accent: var(--font-grotesk);
+  --font-impact: var(--font-bebas);
+  --font-script: var(--font-dancing);
+  --font-editorial: var(--font-cormorant);
+  --font-body: var(--font-inter);
+}
+
+/* Light page, dark blocks inset on top of it (they carry their own radius) */
+body {
+  background: var(--pure-white);
+  color: var(--brand-black);
+  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+}
+
+/* Blueprint graph-paper motif (Design.md §4) */
+.bg-graph {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+.bg-graph-dark {
+  background-image:
+    linear-gradient(to right, rgba(26, 26, 26, 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(26, 26, 26, 0.1) 1px, transparent 1px);
+  background-size: 42px 42px;
+}
+
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* ── Page transition: ink "straps" ────────────────────────────────────────────
+   Same staircase geometry as the intro loader (components/layout/preloader.tsx)
+   minus the logo and the orange band. The clip is the *gap* between two ink
+   panels offset ±k along y: k=115% → whole viewport visible, k=0 → fully closed.
+   So the outgoing page is eaten by the straps closing, the ::view-transition
+   backdrop shows the ink + graph paper, then the incoming page is released as
+   they open. Pure CSS on the root snapshots — no overlay DOM, no JS.
+   Geometry generated with N=6 steps; regenerate via docs/reference/legacy-site/SITE-MAP.md. */
+@keyframes straps-close {
+  from {
+    clip-path: polygon(0% -15%, 16.67% -15%, 16.67% -31.67%, 33.33% -31.67%, 33.33% -48.33%, 50% -48.33%, 50% -65%, 66.67% -65%, 66.67% -81.67%, 83.33% -81.67%, 83.33% -98.33%, 100% -98.33%, 100% -115%, 100% 115%, 100% 131.7%, 83.33% 131.7%, 83.33% 148.3%, 66.67% 148.3%, 66.67% 165%, 50% 165%, 50% 181.7%, 33.33% 181.7%, 33.33% 198.3%, 16.67% 198.3%, 16.67% 215%, 0% 215%);
+  }
+  to {
+    clip-path: polygon(0% 100%, 16.67% 100%, 16.67% 83.33%, 33.33% 83.33%, 33.33% 66.67%, 50% 66.67%, 50% 50%, 66.67% 50%, 66.67% 33.33%, 83.33% 33.33%, 83.33% 16.67%, 100% 16.67%, 100% 0%, 100% 0%, 100% 16.67%, 83.33% 16.67%, 83.33% 33.33%, 66.67% 33.33%, 66.67% 50%, 50% 50%, 50% 66.67%, 33.33% 66.67%, 33.33% 83.33%, 16.67% 83.33%, 16.67% 100%, 0% 100%);
+  }
+}
+@keyframes straps-open {
+  from {
+    clip-path: polygon(0% 100%, 16.67% 100%, 16.67% 83.33%, 33.33% 83.33%, 33.33% 66.67%, 50% 66.67%, 50% 50%, 66.67% 50%, 66.67% 33.33%, 83.33% 33.33%, 83.33% 16.67%, 100% 16.67%, 100% 0%, 100% 0%, 100% 16.67%, 83.33% 16.67%, 83.33% 33.33%, 66.67% 33.33%, 66.67% 50%, 50% 50%, 50% 66.67%, 33.33% 66.67%, 33.33% 83.33%, 16.67% 83.33%, 16.67% 100%, 0% 100%);
+  }
+  to {
+    clip-path: polygon(0% -15%, 16.67% -15%, 16.67% -31.67%, 33.33% -31.67%, 33.33% -48.33%, 50% -48.33%, 50% -65%, 66.67% -65%, 66.67% -81.67%, 83.33% -81.67%, 83.33% -98.33%, 100% -98.33%, 100% -115%, 100% 115%, 100% 131.7%, 83.33% 131.7%, 83.33% 148.3%, 66.67% 148.3%, 66.67% 165%, 50% 165%, 50% 181.7%, 33.33% 181.7%, 33.33% 198.3%, 16.67% 198.3%, 16.67% 215%, 0% 215%);
+  }
+}
+
+/* the ink that shows through while both snapshots are clipped away */
+::view-transition {
+  background-color: #101010;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+::view-transition-old(root) {
+  animation: 420ms cubic-bezier(0.83, 0, 0.17, 1) both straps-close;
+}
+/* 420ms close + 200ms hold on the covered state (reads as a beat, not a glitch) + open */
+::view-transition-new(root) {
+  animation: 460ms cubic-bezier(0.83, 0, 0.17, 1) 620ms both straps-open;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  /* `*` doesn't match view-transition pseudo-elements — kill them explicitly */
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}
