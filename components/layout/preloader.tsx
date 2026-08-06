@@ -107,7 +107,7 @@ export default function Preloader() {
 
       {/* logo + tagline — sit in the empty space above the staircase */}
       <motion.div
-        className="absolute left-1/2 top-[38%] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center md:left-[30%] md:top-[36%]"
+        className="absolute left-6 top-[20%] flex -translate-y-1/2 flex-col items-start text-left md:left-[30%] md:top-[36%] md:-translate-x-1/2 md:items-center md:text-center"
         animate={{ opacity: split ? 0 : 1 }}
         transition={{ duration: split ? 0.18 : 0, ease: "easeOut" }}
       >
@@ -130,7 +130,7 @@ export default function Preloader() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: EASE_DRAW, delay: 0.85 }}
-          className="mt-5 font-accent text-[10px] uppercase tracking-[0.3em] text-white/45 sm:text-xs"
+          className="mt-5 max-w-[9rem] font-accent text-[10px] uppercase tracking-[0.3em] text-white/45 sm:text-xs md:max-w-none"
         >
           Your Partner in Digital Growth
         </motion.p>

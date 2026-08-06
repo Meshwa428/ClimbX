@@ -15,6 +15,9 @@
   --burnt-orange: #c97100;
   --soft-black: #2c2c2c;
   --off-white: #f5f5f5;
+  /* Not a brand colour — the one surface that goes to true black, so the service cards'
+     grey motifs have something to be grey *against*. --brand-black (#1a1a1a) flattens them. */
+  --true-black: #000000;
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
@@ -28,6 +31,7 @@
   --color-burnt: var(--burnt-orange);
   --color-graphite: var(--soft-black);
   --color-cloud: var(--off-white);
+  --color-void: var(--true-black);
 
   --font-display: var(--font-raleway);
   --font-accent: var(--font-grotesk);
@@ -63,6 +67,14 @@ body {
     transform: translateX(-50%);
   }
 }
+
+/* Click on empty space: the 9px cursor dot swells ~5px and falls back (14/9 = 1.55).
+   Sits on its own element so it composes with the state scale above it instead of
+   overwriting it. */
+/* The click swell used to live here as @keyframes. It can't: a keyframe always restarts from
+   its 0% value, so a second click while the dot was still falling snapped it back to 9px
+   first. It is now a chased target inside the cursor's own rAF loop (components/effects/
+   cursor.tsx) — a click sets the target, the dot lerps toward it from wherever it is. */
 
 /* ── Page transition: ink "straps" ────────────────────────────────────────────
    Same staircase geometry as the intro loader (components/layout/preloader.tsx)

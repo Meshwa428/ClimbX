@@ -51,6 +51,14 @@ npx shadcn@latest add https://reactbits.dev/r/<Component>-<LANG>-<STYLE>
 - **Brand props:** small `rotationAmount`, small `blurAmount` for depth, `itemDistance`/`baseScale` tuned; brand-styled cards (dark surface, amber border, `--radius`).
 - **Deps:** lenis (already in stack). ⚠️ **Scroll ownership:** ScrollStack spins up its **own Lenis instance**. We already run a global `LenisProvider`. Do **not** run two Lenis instances on the same scroller — either scope ScrollStack to an internal scroller (`useWindowScroll={false}`) or drive it from the global Lenis. Resolve before use (`Architecture.md §performance`).
 
+## 6. SplitText — every headline + lead paragraph below the hero ✅ INSTALLED
+- **Where:** wrapped as `SplitReveal` in `components/sections/kit.tsx`; `SectionTitle` is built on it, and Expertise's lead + the CTA headline call it directly. Not used in the hero — that headline animates on load, not on scroll.
+- **Brand props:** `splitType="words"` + **`mask="words"`**, `from={{ yPercent: 115 }}` → `to={{ yPercent: 0 }}`, `duration={0.8}`, `delay={45}` (stagger ms), `ease="expo.out"` (the house `cubic-bezier(0.16, 1, 0.3, 1)`), `threshold={0.15}`, `rootMargin="-80px"`.
+- **No opacity in `from`/`to`.** Words slide up out of their own clip box — solid or hidden, never a grey ghost. Adding `opacity` back reintroduces the fade the client rejected.
+- **Deps:** `gsap@^3.15`, `@gsap/react@^2.1.2` — first React Bits component to need them (SplitText the *plugin* is free from gsap 3.13).
+- **Two local deltas from the registry source** (`components/reactbits/SplitText.jsx`, both commented in-file): the `mask` prop pass-through, and a `prefers-reduced-motion` guard that skips the split entirely. Re-fetching the registry drops both.
+- **Chars, not words?** No — at 7xl a per-letter stagger reads as a slot machine and multiplies every headline's node count by ~6.
+
 ---
 
 ## Dependency summary
@@ -61,8 +69,9 @@ npx shadcn@latest add https://reactbits.dev/r/<Component>-<LANG>-<STYLE>
 | FlowingMenu | gsap ✓ (have) | per-link images |
 | TiltedCard | motion ✓ (have) | project images |
 | ScrollStack | lenis ✓ (have) | — (watch double-Lenis) |
+| **SplitText** ✅ | **gsap + @gsap/react (installed)** | — |
 
-**No new npm dependencies.** Only new asset: the tick sound. Record any deviation in `Memory.md`.
+Only new asset: the tick sound. Record any deviation in `Memory.md`.
 
 ## Open confirmations
 - [ ] Hero "strands" bg = React Bits **Threads**? (paste was OptionWheel)

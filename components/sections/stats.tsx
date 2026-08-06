@@ -46,23 +46,25 @@ export default function Stats() {
     // the one surface that carries the blueprint grid — "data-driven", used once, not everywhere
     <section className={LIGHT_BLOCK}>
       <div className="absolute inset-0 bg-graph-dark" />
-      <div className={`relative ${SECTION} ${CONTAINER}`}>
-        <SectionTitle>What the climb adds up to.</SectionTitle>
+      <div className={`relative ${SECTION}`}>
+        <div className={CONTAINER}>
+          <SectionTitle>What the climb adds up to.</SectionTitle>
 
-        <div
-          ref={ref}
-          className="mt-20 grid gap-x-10 gap-y-14 sm:grid-cols-2 md:mt-28 md:grid-cols-4 md:items-end"
-        >
-          {stats.map((s, i) => (
-            <Reveal key={s.label} delay={i * 0.07} className={CLIMB[i]}>
-              <p className="font-display text-5xl font-bold tabular-nums tracking-[-0.03em] md:text-6xl">
-                {s.prefix}
-                {reduce ? s.to.toFixed(s.decimals) : <Ticker to={s.to} decimals={s.decimals} play={inView} />}
-                <span className="text-brand">{s.suffix}</span>
-              </p>
-              <p className="mt-5 border-t border-ink/15 pt-5 text-sm text-graphite">{s.label}</p>
-            </Reveal>
-          ))}
+          <div
+            ref={ref}
+            className="mt-20 grid gap-x-10 gap-y-14 sm:grid-cols-2 md:mt-28 md:grid-cols-4 md:items-end"
+          >
+            {stats.map((s, i) => (
+              <Reveal key={s.label} delay={i * 0.07} className={CLIMB[i]}>
+                <p className="font-display text-5xl font-bold tabular-nums tracking-[-0.03em] md:text-6xl">
+                  {s.prefix}
+                  {reduce ? s.to.toFixed(s.decimals) : <Ticker to={s.to} decimals={s.decimals} play={inView} />}
+                  <span className="text-brand">{s.suffix}</span>
+                </p>
+                <p className="mt-5 border-t border-ink/15 pt-5 text-sm text-graphite">{s.label}</p>
+              </Reveal>
+            ))}
+          </div>
         </div>
       </div>
     </section>

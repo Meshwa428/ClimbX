@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
+import SplitText from "@/components/reactbits/SplitText";
 
 // Shared section furniture. House principles (Design.md §0): space is the main material —
 // one idea per screen, type carries the page, colour is spent deliberately, and the layout
@@ -31,15 +32,48 @@ export function Reveal({
   );
 }
 
-export function SectionTitle({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+// Word reveal — React Bits `SplitText` (Components.md), words split and each one sliding
+// up out of its own mask. No fade: a word is either behind the clip or fully solid.
+// ponytail: words, not chars — at display sizes a per-letter stagger reads as a slot
+// machine, and it multiplies the node count of every headline on the page by ~6.
+export function SplitReveal({
+  children,
+  className = "",
+  as = "p",
+  align = "left",
+}: {
+  children: string;
+  className?: string;
+  as?: "h2" | "h3" | "p";
+  align?: "left" | "center";
+}) {
   return (
-    <Reveal>
-      <h2
-        className={`max-w-3xl font-display text-5xl font-bold leading-[0.95] tracking-[-0.03em] sm:text-6xl md:text-7xl ${className}`}
-      >
-        {children}
-      </h2>
-    </Reveal>
+    <SplitText
+      text={children}
+      tag={as}
+      className={className}
+      splitType="words"
+      mask="words"
+      from={{ yPercent: 115 }}
+      to={{ yPercent: 0 }}
+      duration={1.1}
+      delay={70}
+      ease="expo.out"
+      threshold={0.15}
+      rootMargin="-80px"
+      textAlign={align}
+    />
+  );
+}
+
+export function SectionTitle({ children, className = "" }: { children: string; className?: string }) {
+  return (
+    <SplitReveal
+      as="h2"
+      className={`max-w-3xl font-display text-5xl font-bold leading-[0.95] tracking-[-0.03em] sm:text-6xl md:text-7xl ${className}`}
+    >
+      {children}
+    </SplitReveal>
   );
 }
 
@@ -77,7 +111,10 @@ export function PillLink({
   );
 }
 
-export const SECTION = "px-6 py-28 md:px-16 md:py-40";
+// SECTION owns the page gutter + vertical rhythm, CONTAINER owns the measure. Always
+// nested (section → SECTION, inner div → CONTAINER) so every headline on the site lands
+// on the same left edge — putting both on one element makes the padding eat the max-width.
+export const SECTION = "px-6 py-24 md:px-16 md:py-40";
 export const CONTAINER = "mx-auto max-w-6xl";
 // Blocks are full-bleed — they span the viewport and only the top corners round off, so a
 // surface reads as the page changing colour, not as a card floating on it. A block that
