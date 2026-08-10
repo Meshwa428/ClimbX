@@ -1,4 +1,5 @@
 import Link from "next/link";
+import GuitarString from "@/components/effects/guitar-string";
 
 // Footer — white, roomy. Contact details are outline pills (the site's one button shape),
 // navigation sits as two quiet columns on the right.
@@ -62,7 +63,12 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-16 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-ink/10 pt-6 md:mt-24 md:pt-8">
+        {/* Elastic string divider — replaces the static border-t */}
+        <div className="mt-16 md:mt-24">
+          <GuitarString height={50} strokeWidth={1} color="rgba(26,26,26,0.12)" />
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 pt-4 md:pt-6">
           <div className="flex flex-wrap items-center gap-x-6 text-sm text-ink/45">
             {legal.map(([label, href]) => (
               <Link

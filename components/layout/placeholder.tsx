@@ -1,4 +1,5 @@
 import Link from "next/link";
+import GuitarString from "@/components/effects/guitar-string";
 
 // ponytail: one shell for every route we haven't designed yet. Exists so the nav/footer
 // never 404 and page transitions are testable. Replace per-page as each phase lands.
@@ -12,12 +13,19 @@ export default function Placeholder({ eyebrow, title }: { eyebrow: string; title
         {/* TODO(content): real page — copy captured in docs/reference/legacy-site/ */}
         This page is next on the climb.
       </p>
+
+      {/* Elastic guitar-string divider */}
+      <div className="relative mt-10 w-full max-w-xl">
+        <GuitarString height={60} strokeWidth={1.2} color="rgba(26,26,26,0.14)" />
+      </div>
+
       <Link
         href="/"
-        className="relative mt-8 inline-flex min-h-11 items-center rounded-full border border-ink/20 px-6 py-2.5 font-accent text-xs text-ink/80 transition-colors duration-200 hover:border-ink/40 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+        className="relative mt-2 inline-flex min-h-11 items-center rounded-full border border-ink/20 px-6 py-2.5 font-accent text-xs text-ink/80 transition-colors duration-200 hover:border-ink/40 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
       >
         Back home
       </Link>
     </main>
   );
 }
+
