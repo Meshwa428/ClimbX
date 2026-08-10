@@ -11,7 +11,7 @@ ClimbX Digital brand website. Read this before working. Companion docs are autho
 5. **Tokens only.** Never hardcode a hex or raw font name — use the CSS vars from `Design.md`. Don't invent colors/fonts.
 6. **Motion house style** from `RULES.md §4` / `Design.md §5` (Emil Kowalski notes): strong ease-out for enter/exit, <300ms UI, start ≥scale(0.9), press scale(0.97), transform/opacity only. **Every animation needs a `prefers-reduced-motion` path.**
 7. **Performance:** hero shader `ssr:false` + post-paint, static poster is LCP; three.js stays in the hero chunk; `next/image`; kill GSAP triggers on unmount.
-8. **Accessibility is not optional** (`RULES.md §6`): semantics, keyboard, focus-visible, contrast, alt, labels.
+8. **Accessibility is not optional** (`RULES.md §6`): semantics, keyboard, focus-visible, contrast, alt, labels
 
 ## Never
 - Add a dependency without a one-line justification in `Memory.md`. Climb the ladder in `RULES.md §3` first (platform → installed dep → few lines → only then a dep).
