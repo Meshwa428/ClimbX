@@ -63,34 +63,38 @@ export default function GuitarString({
     // is on top of it — the push then peaks right as they meet.
     const push = height * 0.55;
     const reach = height;
-    // Which side of the string the cursor was on last frame. Crossing it *is* the pluck.
-    let side = 0;
+    // How far it bends before the grip breaks. Below the max bow (`push * 2`) or it could
+    // never be reached — the string has to be able to lose.
+    const LIMIT = push * 1.3;
+    // While it is ringing the cursor is not holding it any more, so tracking is off. That is
+    // the whole trick: track → snap → ring → track again.
+    let ringing = false;
 
-    // Twang: overshoot the target and ring around it. `elastic.out(amplitude, period)` —
-    // a short period is what makes it read as a string rather than a rubber band.
-    const twang = (y: number) =>
+    // Twang: overshoot rest and ring around it. `elastic.out(amplitude, period)` — a short
+    // period is what makes it read as a string rather than a rubber band.
+    const twang = () => {
+      ringing = true;
       gsap.to(point.current, {
-        y,
+        y: defaultY,
         duration: 1.6,
         ease: "elastic.out(1, 0.16)",
         onUpdate: draw,
         overwrite: "auto",
+        onComplete: () => {
+          ringing = false; // back at rest — the cursor can pick it up again
+        },
       });
+    };
 
     const onMove = (e: MouseEvent) => {
+      if (ringing) return; // let it finish; a chase tween here would cut the note short
       const rect = container.getBoundingClientRect();
       point.current.x = e.clientX - rect.left;
-      const py = e.clientY - rect.top;
       // A quadratic's midpoint is only a quarter of the way to its control point, so the
       // control sits at 2x the displacement we actually want to see.
-      const target = defaultY + repelTarget(defaultY, py, reach, push) * 2;
-      const now = Math.sign(py - defaultY) || side;
+      const target = defaultY + repelTarget(defaultY, e.clientY - rect.top, reach, push) * 2;
 
-      if (side && now !== side) {
-        side = now;
-        return void twang(target); // pushed through — let it ring on the far side
-      }
-      side = now;
+      if (Math.abs(target - defaultY) >= LIMIT) return twang(); // stretched too far — released
 
       // Tracking the cursor is a chase, not a spring: an elastic tween restarted on every
       // mousemove would fight itself and read as jitter.
@@ -109,8 +113,7 @@ export default function GuitarString({
 
     const onLeave = () => {
       hovered.current = false;
-      side = 0;
-      twang(defaultY); // released — ring back to rest
+      if (!ringing) twang(); // walked away with it still bent — same release
     };
 
     const onResize = () => {
