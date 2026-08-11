@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import SplitText from "@/components/reactbits/SplitText";
+import { CONTAINER } from "@/components/sections/layout";
 
 // Shared section furniture. House principles (Design.md §0): space is the main material —
 // one idea per screen, type carries the page, colour is spent deliberately, and the layout
@@ -44,7 +45,7 @@ export function SplitReveal({
 }: {
   children: string;
   className?: string;
-  as?: "h2" | "h3" | "p";
+  as?: "h1" | "h2" | "h3" | "p";
   align?: "left" | "center";
 }) {
   return (
@@ -74,6 +75,45 @@ export function SectionTitle({ children, className = "" }: { children: string; c
     >
       {children}
     </SplitReveal>
+  );
+}
+
+// Every inner page opens the same way: eyebrow, one enormous line, one paragraph, on the
+// hero's own graph-paper surface. Same furniture as the home hero minus the deck, so a route
+// change reads as the same building with a different room.
+export function PageHead({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  children?: string;
+}) {
+  return (
+    <header className="relative overflow-hidden bg-cloud px-6 pb-24 pt-40 text-ink md:px-16 md:pb-32 md:pt-56">
+      <div className="absolute inset-0 bg-graph-dark" />
+      <div className={`relative ${CONTAINER}`}>
+        <p className="font-accent text-xs uppercase tracking-[0.3em] text-burnt">{eyebrow}</p>
+        {/* Each on its own block row: SplitText's root is `display:inline-block` (inline
+            style, so no class can override it) and two of them in a row share a line box. */}
+        <div>
+          <SplitReveal
+            as="h1"
+            className="mt-5 max-w-4xl font-display text-5xl font-bold leading-[0.95] tracking-[-0.03em] sm:text-6xl md:text-8xl"
+          >
+            {title}
+          </SplitReveal>
+        </div>
+        {children && (
+          <div>
+            <SplitReveal className="mt-8 max-w-xl text-lg text-graphite md:text-xl">
+              {children}
+            </SplitReveal>
+          </div>
+        )}
+      </div>
+    </header>
   );
 }
 
@@ -111,16 +151,3 @@ export function PillLink({
   );
 }
 
-// SECTION owns the page gutter + vertical rhythm, CONTAINER owns the measure. Always
-// nested (section → SECTION, inner div → CONTAINER) so every headline on the site lands
-// on the same left edge — putting both on one element makes the padding eat the max-width.
-export const SECTION = "px-6 py-24 md:px-16 md:py-40";
-export const CONTAINER = "mx-auto max-w-6xl";
-// Blocks are full-bleed — they span the viewport and only the top corners round off, so a
-// surface reads as the page changing colour, not as a card floating on it. A block that
-// follows a different-coloured one is pulled up by its own radius so the corner notches
-// reveal the block underneath; without that overlap the curve has nothing to curve against.
-export const DARK_BLOCK =
-  "relative -mt-8 rounded-t-[2rem] bg-ink text-white md:-mt-12 md:rounded-t-[3rem]";
-export const LIGHT_BLOCK =
-  "relative -mt-8 overflow-hidden rounded-t-[2rem] bg-cloud text-ink md:-mt-12 md:rounded-t-[3rem]";

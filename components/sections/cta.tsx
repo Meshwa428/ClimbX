@@ -1,6 +1,7 @@
 "use client";
 
-import { CONTAINER, DARK_BLOCK, PillLink, Reveal, SplitReveal } from "@/components/sections/kit";
+import { CONTAINER, DARK_BLOCK } from "@/components/sections/layout";
+import { PillLink, Reveal, SplitReveal } from "@/components/sections/kit";
 
 // Closing CTA — one dark block, one enormous line, one outline pill. Nothing else.
 export default function Cta() {

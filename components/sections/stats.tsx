@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useInView, useReducedMotion } from "motion/react";
-import { CONTAINER, LIGHT_BLOCK, Reveal, SECTION, SectionTitle } from "@/components/sections/kit";
+import { CONTAINER, LIGHT_BLOCK, SECTION } from "@/components/sections/layout";
+import { Reveal, SectionTitle } from "@/components/sections/kit";
 
 // The numbers — four figures, nothing else. They count up once, on a thin rule, with the
 // unit in orange as the only colour on the section.

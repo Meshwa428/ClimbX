@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { CONTAINER, DARK_BLOCK, PillLink, Reveal, SECTION, SectionTitle } from "@/components/sections/kit";
+import { CONTAINER, DARK_BLOCK, SECTION } from "@/components/sections/layout";
+import { PillLink, Reveal, SectionTitle } from "@/components/sections/kit";
 
 // Climbs we've led — ink block, two columns walking the page at different rates so the
 // grid ascends. The image is the whole target: hover swaps the cursor to the Explore disc.

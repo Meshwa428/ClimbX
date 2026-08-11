@@ -13,6 +13,7 @@ import Nav from "@/components/layout/nav";
 import PageTransition from "@/components/layout/page-transition";
 import Cursor from "@/components/effects/cursor";
 import SmoothScroll from "@/components/layout/smooth-scroll";
+import Strings from "@/components/effects/strings";
 
 // Brand type system (Design.md §2). Helvetica Now (body) → Inter substitute until licensed.
 const raleway = Raleway({ variable: "--font-raleway", subsets: ["latin"] });
@@ -46,6 +47,7 @@ export default function RootLayout({
         <PageTransition />
         <Cursor />
         <Nav />
+        <Strings />
         {children}
       </body>
     </html>
