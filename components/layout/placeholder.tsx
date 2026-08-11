@@ -16,7 +16,7 @@ export default function Placeholder({ eyebrow, title }: { eyebrow: string; title
 
       {/* Elastic guitar-string divider */}
       <div className="relative mt-10 w-full max-w-xl">
-        <GuitarString height={60} strokeWidth={1.2} color="rgba(26,26,26,0.14)" />
+        <GuitarString height={76} strokeWidth={1.2} />
       </div>
 
       <Link

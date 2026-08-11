@@ -65,7 +65,7 @@ export default function Footer() {
 
         {/* Elastic string divider — replaces the static border-t */}
         <div className="mt-16 md:mt-24">
-          <GuitarString height={50} strokeWidth={1} color="rgba(26,26,26,0.12)" />
+          <GuitarString height={64} strokeWidth={1} />
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 pt-4 md:pt-6">
