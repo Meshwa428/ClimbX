@@ -1,4 +1,4 @@
-# ClimbX Digital — Brand Website
+# ClimbXDigital — Brand Website
 
 Marketing site for **ClimbX Digital**, a results-driven digital marketing agency in Nagpur.
 Tagline: *Your Partner in Digital Growth.*
