@@ -58,15 +58,14 @@ export default function GuitarString({
 
     if (reduce) return; // static line, no interaction
 
-    // Capped in px, not scaled off the hit area: the box only exists to catch the pointer, and
-    // a 104px box tuned as a fraction of itself made the string lunge at a cursor that was
-    // still miles away and bow far harder than the reference does. The cursor has to get
-    // properly close, and the bow stays a shallow arc across the full width.
-    const reach = Math.min(height / 2, 40); // vertical distance at which it starts to feel it
-    const push = Math.min(height * 0.28, 22); // apex px at point-blank
-    // How far it bends before the grip breaks. Under the max bow (`push * 2`) or it could
-    // never be reached — the string has to be able to lose.
-    const LIMIT = push * 1.7;
+    // We want the string to feel highly reactive and repulsive.
+    // - reach = height * 0.7 ensures the string starts reacting the moment the cursor enters
+    //   the container bounds, eliminating any dead zones at the edges.
+    // - push = height * 0.38 allows for a more tactile, deep bend.
+    // - LIMIT = push * 1.8 allows the string to bow further before snapping and releasing.
+    const reach = height * 0.7;
+    const push = height * 0.38;
+    const LIMIT = push * 1.8;
     // While it is ringing the cursor is not holding it any more, so tracking is off. That is
     // the whole trick: track → snap → ring → track again. A timestamp, not a flag the tween
     // clears: a tween that reaches into itself from its own onUpdate throws before it is
@@ -76,16 +75,14 @@ export default function GuitarString({
     // Twang: overshoot rest and ring around it. `elastic.out(amplitude, period)` — a short
     // period is what makes it read as a string rather than a rubber band.
     //
-    // The lock is a third of the ring, not all of it: holding the string uninteractive for the
-    // full ring-out meant staring at a dead line for over a second. By the time the first
-    // overshoot is done the note has read, so the cursor gets it back and any later wobble is
-    // simply overwritten by the chase.
+    // The lock is set to 240ms (down from 320ms) so the string can be re-plucked rapidly,
+    // and the twang ease is tuned to elastic.out(1.3, 0.22) for a more pronounced vibration.
     const twang = () => {
-      lockedUntil = performance.now() + 320;
+      lockedUntil = performance.now() + 240;
       gsap.to(point.current, {
         y: defaultY,
-        duration: 0.9,
-        ease: "elastic.out(1, 0.2)",
+        duration: 0.95,
+        ease: "elastic.out(1.3, 0.22)",
         onUpdate: draw,
         overwrite: "auto",
       });
@@ -103,10 +100,11 @@ export default function GuitarString({
 
       // Tracking the cursor is a chase, not a spring: an elastic tween restarted on every
       // mousemove would fight itself and read as jitter.
+      // Reduced duration to 0.1s and sharpened ease to power3.out to make it feel super reactive.
       gsap.to(point.current, {
         y: target,
-        duration: 0.18,
-        ease: "power2.out",
+        duration: 0.1,
+        ease: "power3.out",
         onUpdate: draw,
         overwrite: "auto",
       });

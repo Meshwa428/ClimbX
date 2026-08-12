@@ -2,8 +2,24 @@
 /* Lenis' own stylesheet — required for the smooth-scroll wrapper to size correctly */
 @import "lenis/dist/lenis.css";
 
+/* pointer:fine — gates hover effects to devices with a mouse; touch devices never see
+   stuck :hover states. Usage: `fine:group-hover/row:scale-[0.99]` etc. */
+@custom-variant fine (@media (pointer: fine));
+
 /* docs are prose, not markup — auto-scanning them minted junk utilities from code samples */
 @source not "../docs";
+
+/* Cuberto-style text roll — the visible text slides up and an identical copy replaces it.
+   Scoped to pointer:fine so phones don't get stuck hover. The component lives in
+   kit.tsx <TextRoll>; these rules drive the hover transform on both spans. */
+@media (pointer: fine) {
+  .group\/roll:hover > span:first-child {
+    transform: translateY(-110%);
+  }
+  .group\/roll:hover > span:last-child {
+    transform: translateY(-110%);
+  }
+}
 
 /* Brand tokens — Design.md §1 (source of truth: assets/Brand fonts and colour.pdf) */
 :root {

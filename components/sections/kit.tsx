@@ -151,3 +151,34 @@ export function PillLink({
   );
 }
 
+// Cuberto signature: the text "rolls" on hover — the visible copy slides up out of its
+// clipped wrapper and an identical duplicate enters from below. Pure CSS transition on
+// the house ease; `pointer: fine` gated so phones never see a stuck hover state.
+export function TextRoll({
+  children,
+  className = "",
+  as: Tag = "span",
+}: {
+  children: string;
+  className?: string;
+  as?: "span" | "h2" | "h3";
+}) {
+  return (
+    <Tag className={`group/roll relative inline-block overflow-hidden ${className}`}>
+      <span
+        className="block transition-transform duration-500"
+        style={{ transitionTimingFunction: "var(--ease-out)" }}
+      >
+        {children}
+      </span>
+      <span
+        className="absolute left-0 top-full block transition-transform duration-500"
+        style={{ transitionTimingFunction: "var(--ease-out)" }}
+        aria-hidden="true"
+      >
+        {children}
+      </span>
+    </Tag>
+  );
+}
+
