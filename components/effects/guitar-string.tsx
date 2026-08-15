@@ -67,29 +67,42 @@ export default function GuitarString({
     const push = height * 0.38;
     const LIMIT = push * 1.8;
     // While it is ringing the cursor is not holding it any more, so tracking is off. That is
-    // the whole trick: track → snap → ring → track again. A timestamp, not a flag the tween
-    // clears: a tween that reaches into itself from its own onUpdate throws before it is
-    // assigned, and the string stays dead for good.
-    let lockedUntil = 0;
+    // the whole trick: track → snap → ring → track again. The flag is cleared from the ring's
+    // `onComplete` — the instant the string stops moving it can be grabbed again, with no
+    // timer to guess at. (It must not be cleared from `onUpdate` by reading the tween: that
+    // reference runs before the variable is assigned and the string stays dead for good.)
+    let ringing = false;
 
     // Twang: overshoot rest and ring around it. `elastic.out(amplitude, period)` — a short
     // period is what makes it read as a string rather than a rubber band.
     //
-    // The lock is set to 240ms (down from 320ms) so the string can be re-plucked rapidly,
-    // and the twang ease is tuned to elastic.out(1.3, 0.22) for a more pronounced vibration.
+    // `elastic.out(1.3, 0.22)` is a pronounced vibration, and its tail is inaudibly small long
+    // before the tween's 0.95s is up. So the lock is not a timer and not the tween's length:
+    // it lifts the frame the string has actually **stopped moving** — sitting on its rest line
+    // and barely travelling between frames. Both tests are needed; at a zero crossing it is on
+    // the rest line at full speed, which is the opposite of settled.
     const twang = () => {
-      lockedUntil = performance.now() + 240;
+      ringing = true;
+      let prev = point.current.y;
       gsap.to(point.current, {
         y: defaultY,
         duration: 0.95,
         ease: "elastic.out(1.3, 0.22)",
-        onUpdate: draw,
         overwrite: "auto",
+        onUpdate: () => {
+          draw();
+          const y = point.current.y;
+          if (Math.abs(y - defaultY) < 0.5 && Math.abs(y - prev) < 0.15) ringing = false;
+          prev = y;
+        },
+        onComplete: () => {
+          ringing = false; // backstop, in case the tween is cut short before it settles
+        },
       });
     };
 
     const onMove = (e: MouseEvent) => {
-      if (performance.now() < lockedUntil) return; // ringing — a chase here cuts the note short
+      if (ringing) return; // still swinging — a chase here would cut the note short
       const rect = container.getBoundingClientRect();
       point.current.x = e.clientX - rect.left;
       // A quadratic's midpoint is only a quarter of the way to its control point, so the
