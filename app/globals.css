@@ -70,7 +70,12 @@ body {
    leaves the mobile tap-to-open with nothing to animate. */
 @property --p {
   syntax: "<number>";
-  inherits: false;
+  /* Must inherit. The scroll handler sets `--p` on the card, but the two things that read it
+     — the gradient motif's opacity and the copy's fade — are *children* of that card. With
+     `inherits: false` a child resolves it to the initial value instead of the card's, so both
+     stayed permanently invisible while the card's own background-color still animated (that
+     one is declared on the same element that carries the property). */
+  inherits: true;
   initial-value: 0;
 }
 
