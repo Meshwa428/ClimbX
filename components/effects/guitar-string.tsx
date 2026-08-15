@@ -65,7 +65,11 @@ export default function GuitarString({
     // - LIMIT = push * 1.8 allows the string to bow further before snapping and releasing.
     const reach = height * 0.7;
     const push = height * 0.38;
-    const LIMIT = push * 1.8;
+    // The bow maxes out at `push * 2` (the control point sits at twice the apex), so a limit
+    // of 1.8 leaves a 10% window — the cursor had to land within ~2px of the line or the
+    // string never let go at all, it just stayed glued to the pointer. 1.25 releases once the
+    // cursor is inside ~13px, which is a pluck you can actually perform.
+    const LIMIT = push * 1.25;
     // While it is ringing the cursor is not holding it any more, so tracking is off. That is
     // the whole trick: track → snap → ring → track again. The flag is cleared from the ring's
     // `onComplete` — the instant the string stops moving it can be grabbed again, with no
