@@ -23,6 +23,18 @@ interface GuitarStringProps {
   height?: number;
 }
 
+// A string between two sections, on the page gutter and the shared measure. Every page needs
+// the same wrapper, so it lives next to the string instead of being retyped per page.
+export function StringRow({ height = 104 }: { height?: number }) {
+  return (
+    <div className="bg-white px-6 md:px-16">
+      <div className="mx-auto max-w-6xl">
+        <GuitarString height={height} strokeWidth={1.5} />
+      </div>
+    </div>
+  );
+}
+
 export default function GuitarString({
   className = "",
   color = "var(--color-ink)",

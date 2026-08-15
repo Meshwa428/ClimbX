@@ -1,7 +1,8 @@
-import Placeholder from "@/components/layout/placeholder";
+import Legal from "@/components/sections/legal";
+import { REFUND_POLICY } from "@/lib/legal-content";
 
 export const metadata = { title: "Cancellation & Refund Policy — ClimbX Digital" };
 
 export default function Page() {
-  return <Placeholder eyebrow="Legal" title="Cancellation & Refund Policy" />;
+  return <Legal doc={REFUND_POLICY} eyebrow="Legal" />;
 }

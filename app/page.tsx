@@ -4,7 +4,7 @@ import Work from "@/components/sections/work";
 import Stats from "@/components/sections/stats";
 import Cta from "@/components/sections/cta";
 import Footer from "@/components/layout/footer";
-import GuitarString from "@/components/effects/guitar-string";
+import { StringRow } from "@/components/effects/guitar-string";
 
 export default function Home() {
   return (
@@ -12,21 +12,11 @@ export default function Home() {
       <main>
         <Hero />
 
-        {/* Elastic string divider — hero → expertise */}
-        <div className="bg-white px-6 md:px-16">
-          <div className="mx-auto max-w-6xl">
-            <GuitarString height={104} strokeWidth={1.5} />
-          </div>
-        </div>
+        <StringRow />
 
         <Expertise />
 
-        {/* Elastic string divider — expertise → work (dark) */}
-        <div className="bg-white px-6 md:px-16">
-          <div className="mx-auto max-w-6xl">
-            <GuitarString height={104} strokeWidth={1.5} />
-          </div>
-        </div>
+        <StringRow />
 
         <Work />
         <Stats />

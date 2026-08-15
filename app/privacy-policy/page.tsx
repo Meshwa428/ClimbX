@@ -1,7 +1,8 @@
-import Placeholder from "@/components/layout/placeholder";
+import Legal from "@/components/sections/legal";
+import { PRIVACY_POLICY } from "@/lib/legal-content";
 
 export const metadata = { title: "Privacy Policy — ClimbX Digital" };
 
 export default function Page() {
-  return <Placeholder eyebrow="Legal" title="Privacy Policy" />;
+  return <Legal doc={PRIVACY_POLICY} eyebrow="Legal" />;
 }
