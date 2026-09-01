@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { cubicBezier } from "@/lib/ease";
 import { usePathname, useRouter } from "next/navigation";
 
 // Page transition — a stepped curtain that only ever travels **upward**.
@@ -33,8 +32,8 @@ import { usePathname, useRouter } from "next/navigation";
 // time back. Every value here is paid twice — once per stair, once per layer — so `STEP_LAG_MS`
 // in particular is worth two of anything else.
 const N = 6; // stairs across the width
-const COVER_MS = 380;
-const REVEAL_MS = 440;
+const COVER_MS = 400;
+const REVEAL_MS = 480;
 const LAYER_LAG_MS = 120;
 // The gap between one stair and the next. This is the knob that makes the staircase read: the
 // steps are not a shape any more, they are the stagger. Raise it for a slower, more deliberate
@@ -77,22 +76,13 @@ const EASE = [0.83, 0, 0.17, 1] as [number, number, number, number];
 // transition feel long. Now there is a mark up there, and with the route prefetched the push
 // can resolve in a frame, which would otherwise land and dismiss the logo in the same breath.
 // Only ever a floor: a slow route waits as long as it needs and this costs nothing.
-// Shorter than it was: the mark's own fade is now 180ms of dwell on its own, so the floor only
-// has to cover the gap between the curtain landing and that fade starting.
-const MIN_COVERED_MS = 160;
+const MIN_COVERED_MS = 280;
 // The mark clears out before the curtain does, so the page is never uncovered underneath a
 // logo that is still sitting there.
 const MARK_OUT_MS = 180;
 
-// The stairs do not fire on an even beat. Their delays are distributed along a curve that is
-// steep at both ends and flat through the middle, so the gap between the first two columns is
-// wide (the sweep starts slow), the middle columns fire almost together (it runs fast), and the
-// last gap widens again (it lands slow). A linear ramp crosses the screen at one flat rate.
-// Steep-ends/flat-middle is the *inverse* of an ease-in-out — the gap between columns is this
-// curve's slope, so the familiar S-curve would give exactly the wrong answer (fast, slow, fast).
-const SWEEP = cubicBezier(0.35, 0.85, 0.65, 0.15);
-// Rightmost column leads at t=0; leftmost trails at t=1.
-const stepDelay = (i: number) => SWEEP((N - 1 - i) / (N - 1)) * TAIL_MS;
+// Rightmost column leads, leftmost trails, on an even beat.
+const stepDelay = (i: number) => (N - 1 - i) * STEP_LAG_MS;
 
 // Each column travels its own height: below the fold → covering → off the top.
 const HIDDEN = "100%";

@@ -249,7 +249,16 @@ Read `cuberto.com/assets/js/bundle.js` + their inlined CSS directly rather than 
     shears apart as they leave. This is why the columns are exact `100/N%` with **no** overlap:
     the slices must tile, and the old 1px-per-column fudge would tear the logo by 5px across.
     Seams are a non-issue — the two layers sit at different stagger offsets, so each one's gaps
-    are backed by the other.
+    are backed by the other. Each copy animates the **inverse** of its column's travel, so the
+    mark stays pinned to the viewport centre and the stairs only uncover it — letting the copies
+    ride with their columns tears the lockup into six pieces at six heights. On the way out the
+    mark fades first (`MARK_OUT_MS`) and the whole curtain waits on it, so the page is never
+    revealed under a logo still sitting there.
+    Tried and reverted at the user's request: distributing the column delays along a bezier
+    (slow/fast/slow sweep) instead of an even beat. Worth remembering *why* it was fiddly if it
+    ever comes back — the gap between two columns is the curve's *slope*, so "slow at the ends"
+    needs a curve steep at the ends and flat in the middle, i.e. the inverse of an ease-in-out;
+    the familiar S-curve gives fast/slow/fast.
   - Preloader: a second pair of clipped halves rendered *first* (so it sits behind) and given
     the same 160ms exit delay. Both seams land on identical geometry, so the back fill only
     ever shows as the light pair's own colour. `GONE_MS` extended by the lag.
