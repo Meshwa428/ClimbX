@@ -27,19 +27,16 @@ import { usePathname, useRouter } from "next/navigation";
 //             Light → dark → page.
 // Same order read forwards and backwards, so the transition folds in on itself: the last thing
 // you see before the swap is the first thing to leave after it.
-// Budget. Every one of these is paid twice — once per stair, once per layer — so they compound
-// fast: the first pass at 460/85/150 plus a 220ms nav lead and a 120ms hold came to 2.5s of
-// curtain, most of it spent on a covered screen with nothing happening. Nobody waits that out.
-// The rule now is that no phase outlasts its own travel by more than the stagger it needs, and
-// the only time the screen is fully dark is however long `router.push` actually takes.
+// The curtain's own speed. Not the thing that made this feel slow — the dead air was all in
+// the middle (see `run` below), so these are back where they read best rather than rushed.
 const N = 6; // stairs across the width
-const COVER_MS = 340;
-const REVEAL_MS = 420;
-const LAYER_LAG_MS = 90;
+const COVER_MS = 460;
+const REVEAL_MS = 560;
+const LAYER_LAG_MS = 150;
 // The gap between one stair and the next. This is the knob that makes the staircase read: the
 // steps are not a shape any more, they are the stagger. Raise it for a slower, more deliberate
 // climb; at 0 the whole curtain is one flat sheet.
-const STEP_LAG_MS = 45;
+const STEP_LAG_MS = 85;
 // A phase is not over until the last, most-delayed column has finished travelling.
 const TAIL_MS = (N - 1) * STEP_LAG_MS;
 // ponytail: if a navigation hangs, uncover anyway rather than leaving the reader staring at
@@ -93,9 +90,11 @@ export default function PageTransition() {
       }
       setPhase("cover");
       window.dispatchEvent(new CustomEvent(NAV_EVENT, { detail: target }));
-      router.prefetch(target);
 
-      await new Promise((r) => setTimeout(r, COVER_MS + TAIL_MS + LAYER_LAG_MS));
+      // Push the moment the page is *hidden*, which is when the leading layer's last column
+      // lands — not when the whole phase ends. The trailing layer is still settling onto an
+      // already-covered screen, so the navigation gets those LAYER_LAG_MS for free.
+      await new Promise((r) => setTimeout(r, COVER_MS + TAIL_MS));
       await new Promise<void>((resolve) => {
         const t = setTimeout(resolve, SAFETY_MS);
         resolveRef.current = () => {
@@ -129,9 +128,29 @@ export default function PageTransition() {
       void run(url.pathname + url.search + url.hash, url.pathname);
     };
 
+    // Warm the route on hover instead of on click. Prefetching at click time meant the payload
+    // only started loading once the curtain was already climbing, so the fetch landed inside
+    // the covered window — which is the beat that reads as "nothing is happening". By the time
+    // a pointer has crossed a link and pressed it, the route is usually already in cache and
+    // the push resolves in a frame or two.
+    const warmed = new Set<string>();
+    const onOver = (e: PointerEvent) => {
+      const a = (e.target as HTMLElement | null)?.closest?.("a");
+      if (!a?.href) return;
+      const url = new URL(a.href, location.href);
+      if (url.origin !== location.origin || url.pathname === location.pathname) return;
+      if (warmed.has(url.pathname)) return;
+      warmed.add(url.pathname);
+      router.prefetch(url.pathname);
+    };
+
     document.addEventListener("click", onClick, true);
-    return () => document.removeEventListener("click", onClick, true);
-  }, [run]);
+    document.addEventListener("pointerover", onOver, { passive: true });
+    return () => {
+      document.removeEventListener("click", onClick, true);
+      document.removeEventListener("pointerover", onOver);
+    };
+  }, [run, router]);
 
   if (phase === "idle") return null;
 
