@@ -251,10 +251,15 @@ Read `cuberto.com/assets/js/bundle.js` + their inlined CSS directly rather than 
     are backed by the other. Each copy animates the **inverse** of its column's travel, so the
     mark stays pinned to the viewport centre and the stairs only uncover it — letting the copies
     ride with their columns tears the lockup into six pieces at six heights. On the way out the
-    mark lifts as it fades (`MARK_OUT_MS`, `MARK_RISE`, house ease-out) and the whole curtain waits
-    on it, so the page is never revealed under a logo still sitting there. The exit is its own
-    nested layer — the wrapper above it is busy cancelling the column's travel, so the mark
-    needs a separate transform to move on its own terms.
+    mark lifts as it fades, and it leaves **with** the curtain rather than before it: it travels
+    for exactly `REVEAL_MS` on the curtain's own `EASE`, so the two read as one movement. The
+    curtain gets only a short head start behind it (`MARK_LEAD_MS` 180, *not* the mark's whole
+    duration). Running a fast 260ms pop on the house ease-out, then a dead beat, then 900ms of
+    curtain on a different rhythm is what made it feel jittery and detached — the two were fully
+    sequential. Opacity is the exception and clears in `MARK_FADE_MS` (320), well inside the
+    travel, because the mark must be invisible before a column uncovers real page behind it.
+    The exit is its own nested layer — the wrapper above it is busy cancelling the column's
+    travel, so the mark needs a separate transform to move on its own terms.
     Tried and reverted at the user's request: distributing the column delays along a bezier
     (slow/fast/slow sweep) instead of an even beat. Worth remembering *why* it was fiddly if it
     ever comes back — the gap between two columns is the curve's *slope*, so "slow at the ends"

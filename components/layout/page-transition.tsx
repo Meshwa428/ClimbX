@@ -51,9 +51,7 @@ const SAFETY_MS = 2000;
 export const NAV_EVENT = "climbx:navigate";
 
 const EASE = [0.83, 0, 0.17, 1] as [number, number, number, number];
-// The house ease-out, for the mark's own exit. The curtain's curve is deliberately hard at both
-// ends — right for a sheet of ink, wrong for a logo lifting off.
-const EASE_MARK = [0.16, 1, 0.3, 1] as [number, number, number, number];
+
 
 // The staircase is built out of *time*, not out of a polygon. The curtain is N full-height
 // columns and each one starts a beat after the one to its right, so the leading edge steps as
@@ -81,11 +79,17 @@ const EASE_MARK = [0.16, 1, 0.3, 1] as [number, number, number, number];
 // can resolve in a frame, which would otherwise land and dismiss the logo in the same breath.
 // Only ever a floor: a slow route waits as long as it needs and this costs nothing.
 const MIN_COVERED_MS = 280;
-// The mark clears out before the curtain does, so the page is never uncovered underneath a
-// logo that is still sitting there. It leaves the way the intro's does — lifting as it fades,
-// rather than dissolving on the spot.
-const MARK_OUT_MS = 260;
-const MARK_RISE = -34; // px it travels on the way out
+// The mark leaves *with* the curtain, not before it. It travels for exactly as long as a column
+// does and on the same curve, so the two read as one movement rather than two events — the last
+// pass ran a 260ms pop on the house ease-out, then held a dead beat, then started 900ms of
+// curtain on a different rhythm entirely, which is what made it feel jittery and detached.
+// The curtain still gets a short head start behind it (MARK_LEAD_MS, not the mark's whole
+// duration) so the logo is already lifting by the time the stairs move.
+const MARK_LEAD_MS = 180;
+const MARK_RISE = -76; // px — a long travel, because it now has a long time to cover it
+// Opacity is the one thing that must not wait: the mark has to be invisible before a column
+// uncovers any real page behind it, so it clears in well under its own travel.
+const MARK_FADE_MS = 320;
 
 // Rightmost column leads, leftmost trails, on an even beat.
 const stepDelay = (i: number) => (N - 1 - i) * STEP_LAG_MS;
@@ -138,7 +142,7 @@ export default function PageTransition() {
       const left = MIN_COVERED_MS - (performance.now() - coveredAt);
       if (left > 0) await new Promise((r) => setTimeout(r, left));
       setPhase("reveal"); // the instant the route has rendered — no beat on the dark
-      await new Promise((r) => setTimeout(r, MARK_OUT_MS + REVEAL_MS + TAIL_MS + LAYER_LAG_MS));
+      await new Promise((r) => setTimeout(r, MARK_LEAD_MS + REVEAL_MS + TAIL_MS + LAYER_LAG_MS));
       setPhase("idle"); // snaps back below the fold, off-screen, with no animation
     },
     [router, reduce],
@@ -195,7 +199,7 @@ export default function PageTransition() {
   const lag = LAYER_LAG_MS / 1000;
   // On the way out the whole curtain waits for the mark to fade before it moves.
   const colDelay = (i: number, extra: number) =>
-    (cover ? 0 : MARK_OUT_MS / 1000) + extra + stepDelay(i) / 1000;
+    (cover ? 0 : MARK_LEAD_MS / 1000) + extra + stepDelay(i) / 1000;
 
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 z-[95] overflow-hidden">
@@ -235,14 +239,18 @@ export default function PageTransition() {
                 animate={cover ? { y: "0%", opacity: 1 } : { y: "100%", opacity: 0 }}
                 transition={{ duration: ms / 1000, ease: EASE, delay: colDelay(i, extra) }}
               >
-                {/* The exit is its own layer, so it can move independently of the pinning
-                    above it: the wrapper is busy cancelling the column's travel, and the mark
-                    needs to lift on its own terms. Leads everything and ignores the stagger —
-                    six columns, one mark, one exit. */}
+                {/* The exit is its own layer, so it can move independently of the pinning above
+                    it: that wrapper is busy cancelling the column's travel. Ignores the stagger
+                    — six columns, one mark, one exit. */}
                 <motion.div
                   initial={{ y: 0, opacity: 1 }}
                   animate={cover ? { y: 0, opacity: 1 } : { y: MARK_RISE, opacity: 0 }}
-                  transition={{ duration: MARK_OUT_MS / 1000, ease: EASE_MARK }}
+                  transition={{
+                    // A column's own duration and a column's own curve: the mark is not
+                    // decorating the reveal, it is part of it.
+                    y: { duration: REVEAL_MS / 1000, ease: EASE },
+                    opacity: { duration: MARK_FADE_MS / 1000, ease: "linear" },
+                  }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
