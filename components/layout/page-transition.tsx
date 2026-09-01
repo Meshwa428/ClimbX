@@ -50,9 +50,6 @@ const SAFETY_MS = 2000;
 export const NAV_EVENT = "climbx:navigate";
 
 const EASE = [0.83, 0, 0.17, 1] as [number, number, number, number];
-// The house ease-out for the mark — the curtain's own curve is deliberately harsh at both ends,
-// which is right for a sheet of ink and wrong for a logo.
-const EASE_MARK = [0.16, 1, 0.3, 1] as [number, number, number, number];
 
 // The staircase is built out of *time*, not out of a polygon. The curtain is N full-height
 // columns and each one starts a beat after the one to its right, so the leading edge steps as
@@ -64,13 +61,16 @@ const EASE_MARK = [0.16, 1, 0.3, 1] as [number, number, number, number];
 // Right-hand column leads, so the edge rides up to the right — the same direction as the climb
 // the brand is named for, and the same one the intro loader's staircase runs.
 //
-// The mark that rides the curtain. It has to arrive *late* — it sits above both layers, so
-// while columns are still climbing it would otherwise show through the gaps and float over the
-// outgoing page. Entering at 55% of the cover means most of the screen is already dark behind
-// it. Leaving is faster than arriving and starts immediately on the reveal, so it is gone
-// before the first column exposes any of the new page.
-const MARK_IN_MS = 380;
-const MARK_OUT_MS = 240;
+// The mark is *printed on* the light curtain, not laid over it. Each column carries a
+// viewport-wide copy of the logo, shifted left by that column's own offset and clipped to the
+// column — so the six slices line up into one whole lockup exactly when the curtain is whole.
+// A column that has not arrived yet simply has not brought its slice, which is what makes the
+// logo assemble as the stairs climb and shear apart again as they leave. Overlaid, it just
+// hovered in front of a half-built curtain.
+//
+// This is why the columns are exact `100/N%` with no overlap: the slices have to tile, and a
+// 1px fudge per column would tear the logo by 5px across. Seams do not matter — the two layers
+// sit at different stagger offsets, so each one's gaps are backed by the other.
 // A floor on the covered state, measured from the moment the page is hidden. Not the empty
 // hold this used to have — that one sat on a blank screen, which is exactly what made the
 // transition feel long. Now there is a mark up there, and with the route prefetched the push
@@ -185,18 +185,16 @@ export default function PageTransition() {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 z-[95] overflow-hidden">
       {[
-        { tint: "bg-ink", extra: cover ? 0 : lag }, // back — dark: leads in, follows out
-        { tint: "bg-graphite", extra: cover ? lag : 0 }, // front — light: follows in, leads out
-      ].map(({ tint, extra }) =>
+        { tint: "bg-ink", extra: cover ? 0 : lag, mark: false }, // back — dark: leads in, follows out
+        { tint: "bg-graphite", extra: cover ? lag : 0, mark: true }, // front — light: follows in, leads out
+      ].map(({ tint, extra, mark }) =>
         Array.from({ length: N }, (_, i) => (
           <motion.div
             key={`${tint}-${i}`}
-            className={`absolute top-0 h-full ${tint}`}
+            className={`absolute top-0 h-full overflow-hidden ${tint}`}
             style={{
-              // +1px so neighbouring columns overlap; at fractional viewport widths an exact
-              // split leaves hairline seams of page showing through the curtain.
               left: `${(i * 100) / N}%`,
-              width: `calc(${100 / N}% + 1px)`,
+              width: `${100 / N}%`,
               willChange: "transform",
             }}
             initial={{ y: HIDDEN }}
@@ -206,34 +204,29 @@ export default function PageTransition() {
               ease: EASE,
               delay: extra + ((N - 1 - i) * STEP_LAG_MS) / 1000,
             }}
-          />
+          >
+            {mark && (
+              // One viewport-wide copy per column, pulled back by this column's own offset, so
+              // the clip leaves exactly this column's slice of it. Centred on the column's own
+              // height, which is the viewport's — so at rest the lockup lands dead centre.
+              <div
+                className="absolute inset-y-0 flex items-center justify-center"
+                style={{ left: `-${i * 100}%`, width: `${N * 100}%` }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/logo/climbx-logo-white.png"
+                  alt=""
+                  width={186}
+                  height={52}
+                  className="h-16 w-auto max-w-[72vw] object-contain md:h-24"
+                />
+              </div>
+            )}
+          </motion.div>
         )),
       )}
 
-      <motion.div
-        className="absolute inset-0 flex items-center justify-center"
-        initial={{ opacity: 0, y: 16, scale: 0.96 }}
-        animate={cover ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: -16, scale: 0.98 }}
-        transition={{
-          duration: (cover ? MARK_IN_MS : MARK_OUT_MS) / 1000,
-          ease: EASE_MARK,
-          // 40% in, so it is fully settled a beat before the last column lands rather than
-          // still arriving as the page swaps underneath it.
-          delay: cover ? ((COVER_MS + TAIL_MS) * 0.4) / 1000 : 0,
-        }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/logo/climbx-logo-white.png"
-          alt=""
-          width={186}
-          height={52}
-          // Big enough to be the thing on the screen rather than a detail on it — this is the
-          // only content the covered state has. `max-w` so the lockup can't run off a narrow
-          // viewport, since it is ~3.6:1.
-          className="h-16 w-auto max-w-[72vw] object-contain md:h-24"
-        />
-      </motion.div>
     </div>
   );
 }

@@ -242,6 +242,14 @@ Read `cuberto.com/assets/js/bundle.js` + their inlined CSS directly rather than 
     house ease. That needs a `MIN_COVERED_MS` floor (280ms) — with the route prefetched the push
     resolves in a frame, which would land and dismiss the logo in the same breath. It is a floor
     only; a slow route waits as long as it needs. Total ~1.88s.
+    The mark is **printed on** the light curtain, not overlaid: each column carries a
+    viewport-wide copy of the logo shifted left by that column's own offset and clipped to the
+    column, so the six slices tile into one lockup exactly when the curtain is whole. A column
+    that has not arrived has not brought its slice — the logo assembles as the stairs climb and
+    shears apart as they leave. This is why the columns are exact `100/N%` with **no** overlap:
+    the slices must tile, and the old 1px-per-column fudge would tear the logo by 5px across.
+    Seams are a non-issue — the two layers sit at different stagger offsets, so each one's gaps
+    are backed by the other.
   - Preloader: a second pair of clipped halves rendered *first* (so it sits behind) and given
     the same 160ms exit delay. Both seams land on identical geometry, so the back fill only
     ever shows as the light pair's own colour. `GONE_MS` extended by the lag.
