@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
+import { cubicBezier } from "@/lib/ease";
 import { usePathname, useRouter } from "next/navigation";
 
 // Page transition — a stepped curtain that only ever travels **upward**.
@@ -32,8 +33,8 @@ import { usePathname, useRouter } from "next/navigation";
 // time back. Every value here is paid twice — once per stair, once per layer — so `STEP_LAG_MS`
 // in particular is worth two of anything else.
 const N = 6; // stairs across the width
-const COVER_MS = 400;
-const REVEAL_MS = 480;
+const COVER_MS = 380;
+const REVEAL_MS = 440;
 const LAYER_LAG_MS = 120;
 // The gap between one stair and the next. This is the knob that makes the staircase read: the
 // steps are not a shape any more, they are the stagger. Raise it for a slower, more deliberate
@@ -76,7 +77,22 @@ const EASE = [0.83, 0, 0.17, 1] as [number, number, number, number];
 // transition feel long. Now there is a mark up there, and with the route prefetched the push
 // can resolve in a frame, which would otherwise land and dismiss the logo in the same breath.
 // Only ever a floor: a slow route waits as long as it needs and this costs nothing.
-const MIN_COVERED_MS = 280;
+// Shorter than it was: the mark's own fade is now 180ms of dwell on its own, so the floor only
+// has to cover the gap between the curtain landing and that fade starting.
+const MIN_COVERED_MS = 160;
+// The mark clears out before the curtain does, so the page is never uncovered underneath a
+// logo that is still sitting there.
+const MARK_OUT_MS = 180;
+
+// The stairs do not fire on an even beat. Their delays are distributed along a curve that is
+// steep at both ends and flat through the middle, so the gap between the first two columns is
+// wide (the sweep starts slow), the middle columns fire almost together (it runs fast), and the
+// last gap widens again (it lands slow). A linear ramp crosses the screen at one flat rate.
+// Steep-ends/flat-middle is the *inverse* of an ease-in-out — the gap between columns is this
+// curve's slope, so the familiar S-curve would give exactly the wrong answer (fast, slow, fast).
+const SWEEP = cubicBezier(0.35, 0.85, 0.65, 0.15);
+// Rightmost column leads at t=0; leftmost trails at t=1.
+const stepDelay = (i: number) => SWEEP((N - 1 - i) / (N - 1)) * TAIL_MS;
 
 // Each column travels its own height: below the fold → covering → off the top.
 const HIDDEN = "100%";
@@ -126,7 +142,7 @@ export default function PageTransition() {
       const left = MIN_COVERED_MS - (performance.now() - coveredAt);
       if (left > 0) await new Promise((r) => setTimeout(r, left));
       setPhase("reveal"); // the instant the route has rendered — no beat on the dark
-      await new Promise((r) => setTimeout(r, REVEAL_MS + TAIL_MS + LAYER_LAG_MS));
+      await new Promise((r) => setTimeout(r, MARK_OUT_MS + REVEAL_MS + TAIL_MS + LAYER_LAG_MS));
       setPhase("idle"); // snaps back below the fold, off-screen, with no animation
     },
     [router, reduce],
@@ -181,6 +197,9 @@ export default function PageTransition() {
   const ms = cover ? COVER_MS : REVEAL_MS;
   // Whichever layer is late is the one you watch arrive, so the delay swaps between phases.
   const lag = LAYER_LAG_MS / 1000;
+  // On the way out the whole curtain waits for the mark to fade before it moves.
+  const colDelay = (i: number, extra: number) =>
+    (cover ? 0 : MARK_OUT_MS / 1000) + extra + stepDelay(i) / 1000;
 
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 z-[95] overflow-hidden">
@@ -199,19 +218,28 @@ export default function PageTransition() {
             }}
             initial={{ y: HIDDEN }}
             animate={{ y }}
-            transition={{
-              duration: ms / 1000,
-              ease: EASE,
-              delay: extra + ((N - 1 - i) * STEP_LAG_MS) / 1000,
-            }}
+            transition={{ duration: ms / 1000, ease: EASE, delay: colDelay(i, extra) }}
           >
             {mark && (
               // One viewport-wide copy per column, pulled back by this column's own offset, so
-              // the clip leaves exactly this column's slice of it. Centred on the column's own
-              // height, which is the viewport's — so at rest the lockup lands dead centre.
-              <div
+              // the clip leaves exactly this column's slice of it.
+              //
+              // The vertical animation is the *inverse* of its column's, which is the whole
+              // trick: the column slides and its copy slides the opposite way by the same
+              // amount, so the logo stays pinned to the centre of the viewport while the column
+              // travels over it. The curtain then only ever *uncovers* the mark, strip by strip.
+              // Letting the copies ride with their columns — which is what the last pass did —
+              // tears the lockup into six pieces at six different heights.
+              <motion.div
                 className="absolute inset-y-0 flex items-center justify-center"
                 style={{ left: `-${i * 100}%`, width: `${N * 100}%` }}
+                initial={{ y: "-100%", opacity: 1 }}
+                animate={cover ? { y: "0%", opacity: 1 } : { y: "100%", opacity: 0 }}
+                transition={{
+                  y: { duration: ms / 1000, ease: EASE, delay: colDelay(i, extra) },
+                  // The fade leads everything and ignores the stagger — one mark, one exit.
+                  opacity: { duration: MARK_OUT_MS / 1000, ease: "linear" },
+                }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -221,7 +249,7 @@ export default function PageTransition() {
                   height={52}
                   className="h-16 w-auto max-w-[72vw] object-contain md:h-24"
                 />
-              </div>
+              </motion.div>
             )}
           </motion.div>
         )),
