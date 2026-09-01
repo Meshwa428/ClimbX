@@ -25,10 +25,28 @@ const social = [
   ["LinkedIn", "#"],
 ];
 
-const PILL =
-  "inline-flex items-center rounded-full border border-ink/25 px-6 py-3.5 text-base transition-colors duration-300 ease-out hover:bg-ink hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand";
+// Same pill as everywhere else (`.pill` in globals.css) — the footer used to be the one
+// place with its own hover.
+const PILL = "pill -ghost px-6 py-3.5 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand";
 const NAV =
   "inline-flex min-h-11 items-center text-lg text-ink/60 transition-colors duration-200 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-sm md:justify-end";
+
+// mailto:/tel: are real anchors, not routes, so they can't use `PillLink` — same three spans
+// though: border, flood, and the label rendered twice for the roll.
+function PillAnchor({ href, children }: { href: string; children: string }) {
+  return (
+    <a href={href} data-cursor="button" className={PILL}>
+      <span aria-hidden className="pill-border" />
+      <span aria-hidden className="pill-ripple">
+        <span />
+      </span>
+      <span className="pill-label">
+        <span>{children}</span>
+        <span aria-hidden>{children}</span>
+      </span>
+    </a>
+  );
+}
 
 export default function Footer() {
   return (
@@ -37,12 +55,8 @@ export default function Footer() {
       <div className="mx-auto max-w-6xl">
         <div className="grid gap-14 md:grid-cols-[1fr_auto]">
           <div className="flex flex-wrap items-start gap-4">
-            <a href="mailto:climbxdigital@gmail.com" data-cursor="button" className={PILL}>
-              climbxdigital@gmail.com
-            </a>
-            <a href="tel:+918767198554" data-cursor="button" className={PILL}>
-              +91 87671 98554
-            </a>
+            <PillAnchor href="mailto:climbxdigital@gmail.com">climbxdigital@gmail.com</PillAnchor>
+            <PillAnchor href="tel:+918767198554">+91 87671 98554</PillAnchor>
             <p className="mt-6 basis-full text-sm leading-relaxed text-graphite">
               <span className="block text-xs uppercase tracking-[0.2em] text-ink/40">Office</span>
               Nagpur, Maharashtra 440001

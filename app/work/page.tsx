@@ -6,7 +6,7 @@ import Cta from "@/components/sections/cta";
 import Footer from "@/components/layout/footer";
 import { StringRow } from "@/components/effects/guitar-string";
 import { CONTAINER, DARK_BLOCK, SECTION } from "@/components/sections/layout";
-import { Magnetic, PageHead, Reveal, SectionTitle, TextRoll } from "@/components/sections/kit";
+import { PageHead, Reveal, SectionTitle, TextRoll } from "@/components/sections/kit";
 
 // Case studies + filter chips per docs/reference/legacy-site/SITE-MAP.md (`/work`). No detail
 // routes exist on the live site and `/work/[slug]` is deferred (CLAUDE.md), so a card is the
@@ -75,8 +75,8 @@ export default function Page() {
                 {filters.map((f) => {
                   const on = f === active;
                   return (
-                    <Magnetic key={f} pull={0.2}>
                       <button
+                        key={f}
                         type="button"
                         role="tab"
                         aria-selected={on}
@@ -90,7 +90,6 @@ export default function Page() {
                       >
                         {f}
                       </button>
-                    </Magnetic>
                   );
                 })}
               </div>
@@ -117,10 +116,11 @@ export default function Page() {
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={`https://picsum.photos/seed/${w.seed}/900/1100`}
+                        src={`https://picsum.photos/seed/${w.seed}/700/875`}
                         alt=""
                         loading="lazy"
-                        className="aspect-[4/3] w-full object-cover transition-transform duration-700 ease-out fine:group-hover/card:scale-[1.04]"
+                        onLoad={(e) => e.currentTarget.classList.remove("opacity-0")}
+                        className="aspect-[4/3] w-full object-cover opacity-0 transition-[opacity,transform] duration-700 ease-out fine:group-hover/card:scale-[1.04]"
                       />
                     </div>
 

@@ -3,7 +3,7 @@
 > Living status file. **Update after every phase and whenever the active file changes.**
 > Keep it short: what's done, what's in progress, what's next, plus decisions & TODOs.
 
-_Last updated: 2026-08-05 — responsive pass: mobile menu, hero deck on phones, one shared gutter._
+_Last updated: 2026-08-25 — SEO audit + AI-tell inventory written to `docs/`._
 
 ---
 
@@ -92,6 +92,9 @@ _Last updated: 2026-08-05 — responsive pass: mobile menu, hero deck on phones,
 - **Cursor squash/stretch (Cuberto `mouse-follower`):** the un-closed lerp gap is the velocity, so it drives `rotate(atan2) scale(1 + s, 1 - s)` on the position wrapper — stretched along travel, pinched across it, perfect circle the moment it catches up. Capped at 0.34 or it reads as a smear. Layers nest position → state scale → disc so the three transforms compose instead of overwriting.
 - **Cursor click pulse:** clicking empty space (nothing matching `a,button,input,textarea,select,[data-cursor]`) swells the 9px dot to 14px (`scale(1.55)`) and back. Reduced motion is covered by the global `*` duration override — no JS branch needed.
 
+- **Expertise: fakes layer + scrubbed playhead (read straight off cuberto.com/assets/js/bundle.js, `feature` component).** Two fixes for one user complaint ("cards look solid, fixed on a single point; the shut ones fight the scroll"). (1) **Fakes** — a `flex` column of spacer divs, each measured to its own card's *open* height, owns the section's height; the real card stack is `absolute inset-x-0 top-0` over it (their `.cb-feature-fakes` / `.cb-feature-items`). A card opening therefore never changes document height, so the cards below stop being shoved down at exactly the rate the scroll lifts them — that cancellation was the "stuck in place / overshoot" read, and it was layout, not easing. (2) **Scrub** — their ScrollTrigger uses `scrub: 1`; we lerp `--p` toward the scroll target at 0.12/frame (frame-rate corrected) instead of writing the raw scroll ramp, so the animation keeps moving after the wheel stops. Their trigger window kept verbatim: each card reads its *own* fake, `top center+=20%` → `bottom center+=30%` (START 0.7 / END 0.8), so the range scales with the card instead of a fixed 280px. Consequence: cards now **close on scroll-up** (their scrub reverses too) — the old one-way "stays open" behaviour is gone. No ScrollTrigger dep: one lerp beats wiring it to Lenis (RULES.md §3).
+- **Guitar string is Cuberto's `divider`, verbatim maths.** Control point = `2 * cursorY - rest + side`, where `side` is a constant ±`height/4` fixed by the half of the box you entered from — that offset alone gives the "shoved aside" read, no falloff curve needed. Chase 0.2s `power2.out`; release **2s `elastic.out(1, 0.2)`** on `mouseleave` only, x recentring on the same tween. Dead ends removed, both user-reported as "too fast, not fluid": the squared-falloff **repel**, the **LIMIT** that cut the string loose mid-hover, and the **`ringing` lock** that made it untouchable while settling — it spent most of a hover unresponsive, and 0.95s of ring is over before you see it. `lib/strings.js` keeps the repel physics for the easter-egg overlay (`effects/strings.tsx`), which does want them; `scripts/check-strings.mjs` still covers it.
+
 ## Dependencies added (record every new dep + why)
 - `motion`, `lucide-react` — hero animations + icons.
 - **Deferred (ponytail):** `three`/`@react-three/fiber`/`three-stdlib`/`camera-controls`/`@shadergradient/react` (Phase 2 intro), `lenis` (Phase 1), `gsap` (Phase 4). Install when the phase needs them.
@@ -113,15 +116,198 @@ _Last updated: 2026-08-05 — responsive pass: mobile menu, hero deck on phones,
 - Orbit cluster: no transparency, wide spread to match orderchaos reference; knobs in `orbit-cluster.tsx` (radiusX/Y, speed, cardW/H, scale range).
 - **Rule (user):** never hand-author SVG — source from free libs (lucide/SVGRepo/Reshot). Keep scope tight; don't cram elements into a section (`RULES.md §9–10`).
 
+## SEO audit (2026-08-25) — diagnosis only, nothing fixed yet
+- **`docs/seo-audit.md`** — full page-by-page audit of all 12 routes. Evidence = source + the
+  prerendered HTML from `npm run build`. **Health Index 64/100 (Fair). No Critical findings.**
+  Category scores: Crawlability 62.5 · Technical 78 · On-Page 42.5 · Content 67.5 · Authority 75.
+- **`docs/content-voice.md`** — the em-dash / AI-tell inventory with line numbers and rewrites,
+  plus the voice + SEO rules for the copy pass. **This is the working doc for the rewrite.**
+- Biggest gaps (all absence, not error): no `sitemap.ts`, no `robots.ts`, no `metadataBase`, no
+  canonical on any page, no OG/Twitter anywhere, no JSON-LD anywhere (incl. the 18-Q FAQ), 7 pages
+  share the root meta description, home has **3 `<h1>`** (`GROW./CLIMB./SCALE.`), and no `<h1>`
+  on the site carries a keyword.
+- Launch gates (become Critical the day it ships): `/work` rupee figures beside Picsum stock
+  (`E2`), and 16 hotlinked picsum images on the LCP route (`T2`).
+- Confirmed good, keep it: 12/12 static prerender · FAQ answers are in the server HTML when the
+  accordion is shut · every `<img>` has `width`/`height` · viewport + `lang` set.
+- **Em-dash count: 22 in body copy, 14 in metadata, 23 in code comments (ignore those).** Legacy
+  site = 3 dashes in 4,274 words; our home page = 9 in 377. The two FAQ answers ClimbX wrote
+  (Q5, Q18) are the only 2 of 18 with an em dash.
+- **Do not "fix" the founder's letter, the 16 verbatim FAQ answers, or the legal docs** — legacy
+  human copy. En dashes in ranges (`7–21`, `Mon–Sat`) are correct, leave them.
+- Next: keyword research → then rewrite `/` and `/services` against `docs/content-voice.md`.
+
+## Motion fidelity pass (Cuberto, from source)
+Read `cuberto.com/assets/js/bundle.js` + their inlined CSS directly rather than guessing.
+- **Services cards** (`components/sections/expertise.tsx`): the missing half was
+  `.cb-feature-item-accordion { transition: grid-template-rows 1.2s cubic-bezier(.16,1,.3,1) }`
+  — a CSS trail that stays on *while* ScrollTrigger scrubs it. We had deliberately removed it
+  on desktop ("a transition would smear the scrub into lag"); the lag is the effect. Restored
+  as a real one-row accordion div (`auto Xfr` on the card was not reliably interpolatable), and
+  `SCRUB` 0.12 → 0.05 so the lerp settles in ~1s like their `scrub: 1` instead of ~130ms.
+- **Divider** (`components/effects/guitar-string.tsx`): the maths was already theirs, the *box*
+  was not. `.cb-divider:before` is a **20px** hit band; the 200px SVG is only overshoot room and
+  is `pointer-events:none`. We ran the same `2y - rest ± 50` over a 104px band, so the control
+  point swung ±104 and whipped after the cursor. Now `REACH = 20` / `BOX = 200` verbatim.
+
+### Second pass (buttons, cursor, spacing)
+- **Buttons**: `.pill` in `globals.css` is Cuberto's `.cb-btn_cta` — a `currentColor` dome
+  rising from below (`50% 50% 0 0` → `0`, .5s/.9s split) under a two-line text roll, plus their
+  springy `scaleX(1.02) cubic-bezier(.34,5.56,.64,1)`. Colour is two vars, `--pill-ink` /
+  `--pill-bg`, swapped by `.-on-dark`; the flood is always `currentColor` and the incoming
+  label always the other one, so the button takes its palette from the surface it sits on.
+  `PillLink` / `PillButton` in `kit.tsx`; hero, contact submit and the footer pills all moved
+  onto it. **`Magnetic` deleted** — it fought the flood.
+- **Cursor**: one `mix-blend-difference` layer now, no second un-blended "Explore" disc. The
+  explore state is a 72px disc with a lucide `ArrowUpRight` drawn *black* — black is the
+  identity under `difference`, so the arrow shows the artwork through the inverted disc.
+- **Services gutter**: Cuberto's feature section uses their `-lg` container (`padding: 0 24rem`
+  vs every other section's `12rem`). Matched with `md:px-24` on the card stack only — the
+  heading stays on the site's own left edge.
+- **Work grid** → `md:columns-2`. A 2-col grid aligns rows, so a 4:3 card beside a 4:5 one left
+  a hole nothing could close. Columns flow independently; mobile collapses to DOM order.
+  Watch: column balancing is by height, so a very lopsided set could split 3/1.
+- Both homepage `<StringRow />`s removed (they sat at the two boundaries that read as voids).
+  Still in use on /work, /about, /faq and the legal pages.
+
+### Third pass (reveal + performance)
+- **Reveal** now uses Cuberto's `Ul` helper verbatim: `y: 70 → 0` over **2s expo.out** with the
+  fade finishing in 1s, batch stagger 0.1. Ours was 18px/600ms — over before the eye registers
+  it began, which is why the work images read as popping in. Work images also fade on their own
+  `onLoad`, since a lazily-decoded image could otherwise land inside a finished reveal.
+- **Perf.** No new deps; deps are already light (gsap, lenis, motion, lucide — no three/R3F on
+  this build). The lag was per-frame work, three causes, all now fixed:
+  1. `expertise.tsx` called `getBoundingClientRect()` on six fakes *inside* the rAF loop, right
+     after the previous frame had dirtied the grid rows → a forced synchronous layout every
+     frame. The fakes are fixed-height spacers, so their offsets are cached on measure/resize
+     and the loop runs off `scrollY`. Zero layout reads while scrolling.
+  2. Card darkening was `background-color: color-mix(...)` on `--p` → a full repaint of six
+     full-width cards *per frame*. Now Cuberto's `.cb-feature-item-fill` structure: a `bg-void`
+     layer whose opacity rides `--p`, which is composited. Cards also get `contain: paint`.
+  3. `ShuffleDeck` ran its four-card blur/z-index loop at 60fps for the whole visit, hero
+     on-screen or not. Now paused by an IntersectionObserver (orbit is a function of elapsed
+     time, so it resumes in the right place).
+- **Blend/blur are NOT the problem** — checked against the source rather than assumed. Cuberto's
+  `.cb-cursor` is `mix-blend-mode: exclusion` in its *resting* state and their `.cb-navbar-fill`
+  is `backdrop-filter: blur(12px) saturate(300%)`. Both shipped, both smooth. The difference is
+  `contain: layout style size` on the cursor root and **no `will-change: transform`** — those go
+  together, because `will-change` promotes the element to its own composited layer and a blended
+  layer must be resolved against its backdrop every frame, so promoting it is the one thing not
+  to do. Ours now matches theirs. Nav chips left as they are; theirs blur harder.
+
+### Fourth pass (stats tiles, grid removals)
+- **Stats** rebuilt as Cuberto's `.cb-overview-tiles`: a 6-column grid of cards, icon pinned
+  top, figure on the floor (`justify-between`), ~22rem tall, `2rem` radius, `4rem` padding.
+  Four tiles → `span 3` each = a clean 2×2 (their span-2/span-3 juggling only exists to balance
+  a five-tile last row). Their `:has(strong)` two-tone is dropped: it tints tiles that contain a
+  number, and all four of ours do. Tiles are white on the section's cloud — their palette is two
+  invented pastels and ours has to be tokens. Icons from lucide (RULES §10).
+- **Both curtains are two-layered now.** A dark staircase leads, a lighter one follows 160ms
+  behind, so the page is covered/uncovered in two moves instead of one flat wipe.
+  - Page transition: **rewritten as DOM** on branch `feat/stair-curtain-transition`, and the
+    View Transitions API is gone. Its pseudo-elements are strictly nested (`::view-transition` ›
+    `-group` › `-image-pair` › the snapshots), so a second curtain layer can only live on an
+    *ancestor* of the page — and clipping an ancestor clips the page with it. Two independent
+    layers are impossible there. As siblings in the DOM it is trivial.
+    Geometry changed too: the curtain travels **upward only** — out of the bottom edge to cover,
+    then onward off the top to uncover from the bottom up. Replaces the old pair of straps
+    closing in from both edges.
+    **The staircase is made of time, not of a polygon.** The curtain is N full-height columns,
+    each starting `STEP_LAG_MS` after the one to its right, so the leading edge steps as it
+    climbs and the step depth is however far a column travels in that lag. Cutting the stairs
+    into a `clip-path` and translating the whole thing rigidly (the first attempt) produced the
+    correct shape and no visible steps at all — a rigid edge crossing the viewport in half a
+    second reads as a slope, not a staircase. `STEP_LAG_MS` is now the knob for the whole
+    effect; at 0 the curtain is one flat sheet. Columns overlap by 1px, or fractional viewport
+    widths leave hairline seams of page showing through.
+    Both layers show in both directions. The lighter panel is in front, so which one you watch
+    is decided purely by which is *late*, and that swaps per phase: on the cover the dark goes
+    first and the light follows onto it (page → dark → light); on the reveal the light goes
+    first, uncovering the dark still standing, which then goes too (light → dark → page). The
+    transition folds in on itself — the last thing seen before the swap is the first to leave
+    after it. The cover wait has to include `LAYER_LAG_MS` now that the cover staggers too.
+    **Budget discipline matters here**: every duration is paid twice, once per stair and once
+    per layer, so they compound. The first cut (460/85/150 + a 220ms nav lead + a 120ms hold)
+    came to **2.5s**, most of it a covered screen with nothing moving. Now 340/45/90, no lead
+    (the nav pill slides *while* the curtain climbs, it never needed a head start) and no hold
+    (reveal fires the instant the route renders) — **1.39s**, and the only fully dark moment is
+    however long `router.push` actually takes.
+  - Preloader: a second pair of clipped halves rendered *first* (so it sits behind) and given
+    the same 160ms exit delay. Both seams land on identical geometry, so the back fill only
+    ever shows as the light pair's own colour. `GONE_MS` extended by the lag.
+- Blueprint grid removed from **Stats**, the **page transition** (`::view-transition`, which
+  also went from a hardcoded `#101010` to `var(--soft-black)`, matching the loader) and the
+  **preloader** (a curtain with its own
+  texture reads as a screen you're stuck on). Preloader also went from a hardcoded `#101010` to
+  `graphite` — softer step down from the `cloud` hero, and a token instead of a hex.
+- `bg-graph-dark` still in use on the hero and `PageHead`.
+
+### Fifth pass (Stats, properly)
+- **`₹` has never had a glyph on this site.** Google's `latin`/`latin-ext` subsets exclude
+  U+20B9 by name (`U+20A0-20AB, U+20AD-20C0`), and every face here loads `subsets: ["latin"]`.
+  It has been falling back to a system font mid-word. Removed from the 60px Stats figure (it
+  lives in the caption now, where a fallback is invisible; Cuberto's counters carry no currency
+  either). **Still large and still falling back at `app/work/page.tsx:137` — `₹2.4Cr` at
+  text-4xl/5xl.** Body-size uses in `work.tsx` and `contact-form.tsx` are cosmetically fine.
+- Stat figures were `font-display` (Raleway) bold. **Design.md §2 assigns stat callouts to Space
+  Grotesk** — now `font-accent` at `font-medium`, matching Cuberto's regular-weight 6rem
+  counters. Bold display type at that size is a headline wearing a number's hat.
+- Layout: their span rules are *content-count* rules, and that is the whole source of the
+  asymmetry. **Five** tiles is the count they are shaped for — three `span 2` across, then
+  `:nth-last-child(2):nth-child(3n+1)` and `:last-child:nth-child(3n+2)` both fire and the last
+  row is two `span 3`s. Four can only ever give three-across-then-one-slab; the earlier 2×2 came
+  from ignoring the rules entirely. Uniform tile height (theirs is a flat 22.5rem) — the spans
+  carry the asymmetry, the heights must not also.
+- The fifth tile is `6 — Disciplines, all in-house`: the length of the services list in
+  `expertise.tsx`, so it is a count of what the site already ships rather than a claim about
+  results needing client sign-off. It first shipped as a statement tile reading "Six
+  disciplines, one ascent" — copy lifted from the Expertise intro, which said nothing
+  measurable and repeated a line already on the same page. TODO notes that Cuberto puts a
+  *credential* in one of these slots; a real award or partner badge belongs in the wide tile.
+- Tint hue: brand orange mixed down in oklab lands on **pink** — what survives the mix is its
+  red. `--light-gold` has the same warmth without the red, so it reads as cream. Pattern is
+  theirs from the reference: top row alternates, bottom row all neutral (carrying the
+  alternation into row 2 turns the grid into a chequerboard).
+- **CTA button** is `ghost` + `onDark`, not solid: on the ink block a solid button has to be
+  *white*, so its flood ran backwards (white pill going black on hover). Ghost keeps it reading
+  as black with a white hairline and floods white.
+- **`SplitText` was clipping descenders.** Its root is `overflow: hidden` and our display
+  headings run `leading-[0.95]` — a line box shorter than the type in it — so `y`/`g`/`p` tails
+  fell outside and were cut. Fixed at the component with `padding-bottom: .18em` +
+  `margin-bottom: -.18em` (em, so it scales; negative margin so nothing below shifts). This
+  affected every `SplitReveal` on the site.
+- Tiles are tinted on a **white** section — Design.md §1 puts off-white on card surfaces, so
+  white-card-on-cloud was backwards. **Two** tints, alternating by position: `brand 7% + white`
+  (warm) against `ink 4% + white` (cool neutral), same lightness, temperature the only
+  difference — their `#e3f5f3` mint against `#f1f3fa` blue-grey. Cuberto picks by content
+  ("mint = the tile has a number"); every tile of ours has one, so ours picks by position,
+  which is Design.md §6 rhythm rather than their semantics. I shipped one flat tone first and
+  the user was right that it killed the section.
+- Icons 34px/1.5 at 35% opacity → 40px/1.75 at full ink, matching their solid black glyphs.
+
+### Sixth pass (deck orbit)
+- `ShuffleDeck` froze each card's outgoing position at the tick boundary and decayed a fixed
+  offset toward the new role. So the moment a swap started, the two cards changing role stopped
+  orbiting and slid down a straight line — the "orbit pauses to hand over" the user saw. Now
+  both ends of the blend are sampled at the *live* orbit angle every frame, so a card recedes to
+  BACK along the arc it was already on and the incoming one keeps circling as it grows. Costs
+  two extra cos/sin per card per frame; the `delta` array is gone.
+
 ## Open TODOs / questions for client
 - [ ] Source the real `click-soft.mp3` tick asset (placeholder in use).
 - [ ] Helvetica Now web license? (else ship Inter as body)
 - [ ] Real content: project numbers, team, testimonials, socials.
+- [ ] 1–2 short *statement* claims for the Stats tiles (Cuberto mixes "300+ projects" tiles with
+      "Recognized by leading design awards" ones — that mix is what earns the two-tone and the
+      uneven spans). All four of ours are figures right now.
 - [ ] Real project/case-study assets + numbers for Work section (`content/work.ts`)
 - [ ] Team member names/photos/roles (`content/team.ts`)
 - [ ] Testimonial quotes + attributions (`content/testimonials.ts`)
 - [ ] Contact delivery: Resend API key vs Formspree? Destination inbox?
 - [ ] Founder photo(s) for Story/Team (have IG crops only)
+- [ ] Real social profile URLs (footer still `href="#"` — blocks `sameAs` schema)
+- [ ] Full street address matching the Google Business Profile (blocks `LocalBusiness` schema)
+- [ ] Target keyword list — blocks the H1/title/description rewrite
 
 ## Notes
 - Brand source of truth: `assets/`. Motion source of truth: `docs/reference/{motion_vocab,practical_animation_tips,design_taste}.md`.

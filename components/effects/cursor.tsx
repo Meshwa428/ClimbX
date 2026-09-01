@@ -1,15 +1,27 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ArrowUpRight } from "lucide-react";
 
-// Global custom cursor. Two stacked layers, each its own fixed element:
-//   • blend layer — white disc on `mix-blend-difference`, so it inverts whatever is under
-//     it. This is the resting dot, and it's what grows on buttons.
-//   • label layer — solid white disc with "Explore", NO blend, for image/card targets.
-// Cross-fading two layers (instead of toggling blend-mode on one) keeps the dot → Explore
-// morph smooth; a live mix-blend-mode switch pops. They can't be children of one wrapper:
-// a transformed parent opens a stacking context, and mix-blend-mode only blends inside the
-// nearest one — nested, the disc would blend against its own empty parent (plain white).
+// Global custom cursor. ONE fixed layer, a white disc on `mix-blend-difference`, so every
+// state inverts whatever is under it — resting dot, button swell and the explore disc alike.
+// There used to be a second, un-blended layer carrying the word "Explore"; that state was the
+// only thing on the page that painted over the artwork instead of inverting it, which is
+// exactly why it looked bolted on.
+//
+// The arrow is drawn *black* rather than knocked out: under `difference`, black is the
+// identity, so those pixels show the photo underneath untouched while the disc around them
+// flips. Same result as a mask, no mask.
+//
+// Blending is not the expensive part — Cuberto's own `.cb-cursor` is `mix-blend-mode:
+// exclusion` in its resting state. What makes theirs cheap is `contain: layout style size`,
+// and the absence of `will-change: transform`. Those two go together: `will-change` promotes
+// the element to its own composited layer, and a *blended* layer has to be resolved against
+// its backdrop every frame, so promoting it is the one thing you must not do. `contain` does
+// the opposite — it tells the browser this subtree can not affect anything outside itself, so
+// the blend stays a bounded region instead of an invalidation that walks up the page. Their
+// element is 0×0 with everything overflowing out of it, which is what `contain: size` means;
+// ours is the same shape, so it takes the same rule.
 //
 // Position is a bare rAF lerp — no springs, no React state, no per-frame allocation, and
 // the loop parks itself once it catches up. It has to be JS: a CSS transition restarts from
@@ -20,7 +32,7 @@ import { useEffect, useRef, useState } from "react";
 // Opt in per element with data-cursor="explore" | "button" | "none"; plain <a>/<button>
 // get the button state for free. The real cursor is never hidden.
 const BASE = 96; // px — every state is a scale of this, so we only ever animate transform
-const SCALE = { dot: 9 / BASE, button: 44 / BASE, explore: 1 };
+const SCALE = { dot: 9 / BASE, button: 44 / BASE, explore: 72 / BASE };
 // Fraction of the remaining gap closed per frame. 0.28 ≈ 90% caught up in ~7 frames
 // (~115ms), which is the old CSS-transition speed — but as one continuous curve, so a small
 // move eases in like a big one instead of completing in a single frame.
@@ -44,9 +56,10 @@ export default function Cursor() {
   const [mode, setMode] = useState<Mode>("dot");
   const [away, setAway] = useState(false); // pointer has left the window
   const blend = useRef<HTMLDivElement>(null);
-  const label = useRef<HTMLDivElement>(null);
   const blendSkew = useRef<HTMLDivElement>(null);
   const disc = useRef<HTMLDivElement>(null);
+  // The deform loop runs outside React, so it needs the mode as a ref, not as state.
+  const modeRef = useRef<Mode>("dot");
 
   useEffect(() => {
     // Skip only when the primary pointer is genuinely coarse (touch). Gating on
@@ -71,11 +84,13 @@ export default function Cursor() {
     // away from the cursor by half its box, and the further it turns the worse it gets.
     const write = (stretch = 0, angle = 0) => {
       const move = `translate3d(${cx}px, ${cy}px, 0)`;
-      const deform = `rotate(${angle}rad) scale(${1 + stretch}, ${1 - stretch})`;
       if (blend.current) blend.current.style.transform = move;
-      if (label.current) label.current.style.transform = move;
-      // only the dot deforms. The label disc carries text, and `rotate()` — invisible on a
-      // circle — spins the word "Explore" with every flick of the mouse.
+      // Only the dot deforms. `rotate()` is invisible on a bare circle but would spin the
+      // arrow with every flick of the mouse, so the explore state stays perfectly round.
+      const deform =
+        modeRef.current === "explore"
+          ? "none"
+          : `rotate(${angle}rad) scale(${1 + stretch}, ${1 - stretch})`;
       if (blendSkew.current) blendSkew.current.style.transform = deform;
     };
     const loop = () => {
@@ -119,6 +134,7 @@ export default function Cursor() {
             : flag === "button" || el.tagName === "A" || el.tagName === "BUTTON"
               ? "button"
               : "dot";
+      modeRef.current = next;
       setMode((m) => (m === next ? m : next));
     };
     // Click on nothing in particular → the dot swells and falls back. Only on empty space:
@@ -182,44 +198,33 @@ export default function Cursor() {
   const morph = "transition-transform duration-300 ease-[cubic-bezier(0.33,1,0.68,1)]";
 
   return (
-    <>
-      <div
-        aria-hidden
-        ref={blend}
-        className="pointer-events-none fixed left-0 top-0 z-[9999] mix-blend-difference will-change-transform"
-        style={{ transform: "translate3d(-200px, -200px, 0)" }}
-      >
-        <div ref={blendSkew} style={box}>
+    <div
+      aria-hidden
+      ref={blend}
+      className="pointer-events-none fixed left-0 top-0 z-[9999] mix-blend-difference"
+      style={{ transform: "translate3d(-200px, -200px, 0)", contain: "layout style size" }}
+    >
+      <div ref={blendSkew} style={box}>
+        <div
+          className={`relative h-full w-full ${morph}`}
+          style={{ transform: `scale(${away ? 0 : SCALE[mode]})` }}
+        >
           <div
-            className={`h-full w-full ${morph}`}
-            style={{ transform: `scale(${away || mode === "explore" ? 0 : SCALE[mode]})` }}
+            ref={disc}
+            onTransitionEnd={onSwelled}
+            className="h-full w-full rounded-full bg-white transition-transform ease-[cubic-bezier(0.16,1,0.3,1)]"
+          />
+          {/* Black, so `difference` leaves these pixels as they were — the arrow reads as a
+              hole cut in the disc onto whatever is behind it. No fade in or out: it appears
+              with the disc it belongs to, and the disc is already doing the animating. */}
+          <div
+            className="absolute inset-0 flex items-center justify-center text-black"
+            style={{ opacity: mode === "explore" ? 1 : 0 }}
           >
-            <div
-              ref={disc}
-              onTransitionEnd={onSwelled}
-              className="h-full w-full rounded-full bg-white transition-transform ease-[cubic-bezier(0.16,1,0.3,1)]"
-            />
+            <ArrowUpRight size={34} strokeWidth={2.25} />
           </div>
         </div>
       </div>
-
-      <div
-        aria-hidden
-        ref={label}
-        className="pointer-events-none fixed left-0 top-0 z-[9999] will-change-transform"
-        style={{ transform: "translate3d(-200px, -200px, 0)" }}
-      >
-        <div style={box}>
-          <div
-            className={`h-full w-full ${morph}`}
-            style={{ transform: `scale(${!away && mode === "explore" ? 1 : 0})` }}
-          >
-            <div className="flex h-full w-full items-center justify-center rounded-full bg-white font-accent text-sm text-ink">
-              Explore
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
+    </div>
   );
 }

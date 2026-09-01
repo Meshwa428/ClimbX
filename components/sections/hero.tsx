@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import { MoveUpRight } from "lucide-react";
 import ShuffleDeck, { type ShuffleItem } from "@/components/effects/shuffle-deck";
+import { PillLink } from "@/components/sections/kit";
 
 // Hero — "Kinetic Steps": light graph-paper, climbing GROW/CLIMB/SCALE headline,
 // and an "Order & Chaos" image cluster orbiting in 3D on the right. SVGs sourced
@@ -27,7 +28,11 @@ export default function Hero() {
       <div className="absolute inset-0 bg-graph-dark" />
 
       {/* headline */}
-      <div className="relative z-10 flex flex-1 items-center px-6 pt-24 md:px-16 xl:pt-0">
+      {/* `items-center` centres the column in the whole section, but the fixed nav eats the
+          top ~90px of that box, so true centre reads as sitting high with a hole under the
+          button. The top padding pays the nav back: with `items-center` it shifts the column
+          down by half of itself. */}
+      <div className="relative z-10 flex flex-1 items-center px-6 pt-24 md:px-16 xl:pt-14">
         <div className="mx-auto w-full max-w-6xl">
           <motion.p
             initial={{ opacity: 0, y: 16 }}
@@ -69,17 +74,12 @@ export default function Hero() {
             transition={{ duration: 0.7, ease: EASE, delay: 0.6 }}
             className="mt-8"
           >
-            <a
-              href="/contact"
-              data-cursor="button"
-              className="group inline-flex items-center gap-2 rounded-full bg-ink px-7 py-4 font-accent text-sm font-semibold text-white transition-colors duration-300 ease-out hover:bg-graphite focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-[0.97]"
-            >
-              Book a call
-              <MoveUpRight
-                size={17}
-                className="transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
-              />
-            </a>
+            <PillLink href="/contact" className="px-7 text-sm font-semibold">
+              <span className="inline-flex items-center gap-2">
+                Book a call
+                <MoveUpRight size={17} />
+              </span>
+            </PillLink>
           </motion.div>
         </div>
       </div>

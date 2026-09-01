@@ -17,7 +17,11 @@ const EASE_SPLIT = [0.83, 0, 0.17, 1] as [number, number, number, number];
 const DRAW_MS = 1900;
 const SPLIT_DELAY_MS = 2250;
 const SPLIT_MS = 1000;
-const GONE_MS = SPLIT_DELAY_MS + SPLIT_MS;
+// The split is two staircases, not one: a dark pair leads, a lighter pair follows one beat
+// behind, so the page is uncovered in two moves instead of one flat wipe. Same lag the page
+// transition uses between its own two layers (`::view-transition` in globals.css).
+const LAYER_LAG_MS = 160;
+const GONE_MS = SPLIT_DELAY_MS + SPLIT_MS + LAYER_LAG_MS;
 
 const N = 6; // steps
 const step = 100 / N;
@@ -70,29 +74,46 @@ export default function Preloader() {
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[100]">
-      {/* back fill — hides the clip seam (same ink), gone the instant the split starts */}
+      {/* Back fill — hides the clip seam (same ink), gone the instant the split starts.
+          No graph paper: the preloader is a curtain, and a curtain with its own texture reads
+          as a screen you are waiting on rather than one being pulled off the page. `graphite`
+          rather than the near-black it was — the hero underneath is `cloud`, so the softer
+          step makes the split a change of light instead of a flashbang. Token, not a hex. */}
       <motion.div
         aria-hidden
-        className="absolute inset-0 bg-graph bg-[#101010]"
+        className="absolute inset-0 bg-graphite"
         animate={{ opacity: split ? 0 : 1 }}
         transition={{ duration: split ? 0 : 0.2 }}
       />
 
-      {/* two ink halves — clean staircase clip, expand apart on the split bezier */}
-      <motion.div
-        aria-hidden
-        style={{ clipPath: panelTopLeft, WebkitClipPath: panelTopLeft, willChange: "transform" }}
-        className="absolute inset-0 bg-graph bg-[#101010]"
-        animate={{ y: split ? "-110%" : 0 }}
-        transition={{ duration: SPLIT_MS / 1000, ease: EASE_SPLIT }}
-      />
-      <motion.div
-        aria-hidden
-        style={{ clipPath: panelBottomRight, WebkitClipPath: panelBottomRight, willChange: "transform" }}
-        className="absolute inset-0 bg-graph bg-[#101010]"
-        animate={{ y: split ? "110%" : 0 }}
-        transition={{ duration: SPLIT_MS / 1000, ease: EASE_SPLIT }}
-      />
+      {/* Two pairs of halves on the same staircase clip. The lighter pair is rendered first so
+          it sits *behind* and leaves last: the dark stairs pull away to reveal lighter stairs
+          still standing, and those pull away to reveal the page. Both seams land on the same
+          geometry, so the back fill only ever shows through as the light pair's own colour. */}
+      {[
+        { tint: "bg-graphite", lag: LAYER_LAG_MS }, // layer 2 — lighter, trails
+        { tint: "bg-ink", lag: 0 }, // layer 1 — darker, leads
+      ].map(({ tint, lag }) =>
+        (
+          [
+            [panelTopLeft, "-110%"],
+            [panelBottomRight, "110%"],
+          ] as const
+        ).map(([clip, exit]) => (
+          <motion.div
+            key={`${tint}-${exit}`}
+            aria-hidden
+            style={{ clipPath: clip, WebkitClipPath: clip, willChange: "transform" }}
+            className={`absolute inset-0 ${tint}`}
+            animate={{ y: split ? exit : 0 }}
+            transition={{
+              duration: SPLIT_MS / 1000,
+              ease: EASE_SPLIT,
+              delay: split ? lag / 1000 : 0,
+            }}
+          />
+        )),
+      )}
 
       {/* solid orange staircase — wipes in; on split it vanishes instantly (no retract) */}
       <motion.div

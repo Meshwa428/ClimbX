@@ -17,7 +17,16 @@ export default function Cta() {
             Let&apos;s find your route.
           </SplitReveal>
           <Reveal delay={0.12}>
-            <PillLink href="/contact" onDark className="mt-14 px-12 py-5 text-lg md:mt-20">
+            {/* Ghost, not solid: on the ink block a solid button had to be *white*, so its
+                flood ran the wrong way — white pill going black on hover. Ghost keeps the
+                button reading as black (the block shows through, a white hairline holds the
+                shape) and the flood arrives white, which is the direction that section wants. */}
+            <PillLink
+              href="/contact"
+              variant="ghost"
+              onDark
+              className="mt-14 px-12 py-5 text-lg md:mt-20"
+            >
               Book a call
             </PillLink>
           </Reveal>
