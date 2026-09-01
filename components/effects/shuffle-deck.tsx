@@ -96,19 +96,34 @@ export default function ShuffleDeck({
     const target = (i: number, tick: number, orbit: number) =>
       slotState((i + tick) % SLOTS, orbit);
 
+    // Phones do not get the blur at all. Transform is composited and nearly free; `filter:
+    // blur()` on a scaled, moving image is a re-rasterisation every frame, four of them, and it
+    // is the most expensive thing this component does by a wide margin. Depth still reads from
+    // scale and stacking order, with opacity standing in for the softness — opacity composites,
+    // blur does not.
+    const coarse = window.matchMedia("(pointer: coarse)").matches;
     // Transform is composited and cheap per frame. `filter: blur()` and z-index are not —
     // each write re-rasterizes the card, so only touch them when the value actually moves.
     const lastBlur: number[] = Array(SLOTS).fill(NaN);
     const lastZ: number[] = Array(SLOTS).fill(NaN);
+    const lastOpacity: number[] = Array(SLOTS).fill(NaN);
     const apply = (el: HTMLDivElement, c: S, i = -1) => {
       el.style.transform = `translate(-50%, -50%) translate(${c.x.toFixed(1)}px, ${c.y.toFixed(
         1,
       )}px) scale(${c.s.toFixed(3)})`;
-      const blur = Math.round(c.b * 4) / 4; // quarter-pixel steps — invisible, ~4x fewer rasters
+      const blur = coarse ? 0 : Math.round(c.b * 4) / 4; // quarter-pixel steps — ~4x fewer rasters
       const z = Math.round(c.s * 100); // biggest (focus) on top, BACK lowest
       if (i < 0 || lastBlur[i] !== blur) {
         el.style.filter = blur ? `blur(${blur}px)` : "none";
         if (i >= 0) lastBlur[i] = blur;
+      }
+      if (coarse) {
+        // The blur's job was to push the satellites back. Opacity does the same job for free.
+        const o = Math.round((1 - (c.b / maxBlur) * 0.5) * 20) / 20;
+        if (i < 0 || lastOpacity[i] !== o) {
+          el.style.opacity = String(o);
+          if (i >= 0) lastOpacity[i] = o;
+        }
       }
       if (i < 0 || lastZ[i] !== z) {
         el.style.zIndex = String(z);

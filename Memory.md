@@ -221,10 +221,15 @@ Read `cuberto.com/assets/js/bundle.js` + their inlined CSS directly rather than 
     effect; at 0 the curtain is one flat sheet. Columns overlap by 1px, or fractional viewport
     widths leave hairline seams of page showing through.
     The lighter panel is in front, so which layer you actually see is decided purely by which is
-    *late*. Cover: both ride together, dark stays hidden behind light, outro is a single grey
-    sheet. Reveal: light leads, uncovering the dark still standing, which then goes too (light →
-    dark → page). The dark still has to make the trip on the cover even though nobody sees it —
-    it is what the light peels back to on the way out. The cover wait has to include `LAYER_LAG_MS` now that the cover staggers too.
+    *late*, and the size of that gap is asymmetric on purpose (`COVER_LAG_MS` 60 vs
+    `REVEAL_LAG_MS` 130). **Out**, the gap must be small: both layers run their own six-column
+    stagger, so a wide gap sets two combs against each other and the dark shows through in
+    ragged chunks wherever the light hasn't caught up — worst along the left, which arrives a
+    full tail late. Narrow, it stops being a second curtain and becomes a leading *rim* on the
+    first: the page still darkens in two steps (which is what keeps a black sheet from just
+    appearing over a white page) but the edge stays one clean staircase. **Back**, the gap is
+    the whole point — the light has to clear far enough for the dark behind it to register as a
+    second layer before it leaves too. The cover wait has to include `LAYER_LAG_MS` now that the cover staggers too.
     **Budget discipline matters here**: every duration is paid twice, once per stair and once
     per layer, so they compound. The first cut (460/85/150 + a 220ms nav lead + a 120ms hold)
     came to **2.5s**, most of it a covered screen with nothing moving. Now 340/45/90, no lead
@@ -325,6 +330,20 @@ Read `cuberto.com/assets/js/bundle.js` + their inlined CSS directly rather than 
   both ends of the blend are sampled at the *live* orbit angle every frame, so a card recedes to
   BACK along the arc it was already on and the incoming one keeps circling as it grows. Costs
   two extra cos/sin per card per frame; the `delta` array is gone.
+
+### Mobile pass
+- `ShuffleDeck` drops `filter: blur()` entirely on `(pointer: coarse)`. Four transformed, scaled
+  images re-rasterising every frame is by far the most expensive thing on the page for a phone
+  GPU; depth still reads from scale + stacking, with a cheap composited opacity standing in for
+  the softness.
+- Nav glass chips gate `backdrop-blur`/`saturate` behind the `fine:` variant. `backdrop-filter`
+  on a fixed element is re-resolved against the page every scroll frame, and at `bg-white/80`
+  the chip reads as glass without it.
+- Stats tiles `min-h-56 p-8` → `min-h-44 p-7` below `sm`: five 224px tiles was 1120px of scroll
+  for five numbers.
+- Checked and already fine: viewport meta (Next default), no horizontal overflow (marquee and
+  hero both clip), `pointer: coarse` already switches the services stack to a tap accordion and
+  disables the custom cursor, work grid collapses to one column, hero uses `svh`.
 
 ## Open TODOs / questions for client
 - [ ] Source the real `click-soft.mp3` tick asset (placeholder in use).

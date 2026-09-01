@@ -22,12 +22,13 @@ import { usePathname, useRouter } from "next/navigation";
 //
 // Two layers, the lighter one in front — so which of them you actually see is decided purely by
 // which one is *late*. That is the only difference between the two halves:
-//   • cover  — both ride together, so the dark stays hidden behind the light the whole way and
-//              the outro is a single grey sheet.
+//   • cover  — dark leads, light lands on it a beat later. One sheet dropping onto a white page
+//              arrives as an event; staged, the page darkens in two steps and the curtain reads
+//              as something the page does rather than something placed on top of it.
 //   • reveal — the light goes first, uncovering the dark still standing, which then goes too.
 //              Light → dark → page.
-// The dark layer still has to make the trip on the cover even though nobody sees it: it is what
-// the light peels back to reveal on the way out.
+// The dark is also what the light peels back to reveal on the way out, so it has to make the
+// trip either way.
 // The curtain's own speed. Trimmed, but not to the bone: putting a mark on the covered state
 // means the covered state has to last long enough to read it, so the travel has to give that
 // time back. Every value here is paid twice — once per stair, once per layer — so `STEP_LAG_MS`
@@ -35,7 +36,18 @@ import { usePathname, useRouter } from "next/navigation";
 const N = 6; // stairs across the width
 const COVER_MS = 400;
 const REVEAL_MS = 480;
-const LAYER_LAG_MS = 120;
+// How far the two layers separate. Asymmetric on purpose.
+//
+// On the way OUT the gap has to be small. Both layers run their own six-column stagger, so a
+// wide gap sets two combs against each other and the dark shows through in ragged chunks
+// wherever the light has not caught up — worst along the left, which arrives a full tail late.
+// Narrow, it stops being a second curtain and becomes a leading rim on the first: the page
+// still darkens in two steps, but the edge stays one clean staircase.
+//
+// On the way BACK the gap is the whole point — the light has to clear far enough for the dark
+// behind it to be read as a second layer before it goes too.
+const COVER_LAG_MS = 60;
+const REVEAL_LAG_MS = 130;
 // The gap between one stair and the next. This is the knob that makes the staircase read: the
 // steps are not a shape any more, they are the stagger. Raise it for a slower, more deliberate
 // climb; at 0 the whole curtain is one flat sheet.
@@ -128,8 +140,8 @@ export default function PageTransition() {
 
       // Push the moment the page is *hidden*, which is when the leading layer's last column
       // lands — not when the whole phase ends. The trailing layer is still settling onto an
-      // already-covered screen, so the navigation gets those LAYER_LAG_MS for free.
-      await new Promise((r) => setTimeout(r, COVER_MS + TAIL_MS));
+      // already-covered screen, so the navigation gets that layer lag for free.
+      await new Promise((r) => setTimeout(r, COVER_MS + TAIL_MS + COVER_LAG_MS));
       const coveredAt = performance.now();
       await new Promise<void>((resolve) => {
         const t = setTimeout(resolve, SAFETY_MS);
@@ -142,7 +154,7 @@ export default function PageTransition() {
       const left = MIN_COVERED_MS - (performance.now() - coveredAt);
       if (left > 0) await new Promise((r) => setTimeout(r, left));
       setPhase("reveal"); // the instant the route has rendered — no beat on the dark
-      await new Promise((r) => setTimeout(r, MARK_LEAD_MS + REVEAL_MS + TAIL_MS + LAYER_LAG_MS));
+      await new Promise((r) => setTimeout(r, MARK_LEAD_MS + REVEAL_MS + TAIL_MS + REVEAL_LAG_MS));
       setPhase("idle"); // snaps back below the fold, off-screen, with no animation
     },
     [router, reduce],
@@ -196,7 +208,7 @@ export default function PageTransition() {
   const y = cover ? COVERED : GONE;
   const ms = cover ? COVER_MS : REVEAL_MS;
   // Whichever layer is late is the one you watch arrive, so the delay swaps between phases.
-  const lag = LAYER_LAG_MS / 1000;
+  const lag = (cover ? COVER_LAG_MS : REVEAL_LAG_MS) / 1000;
   // On the way out the whole curtain waits for the mark to fade before it moves.
   const colDelay = (i: number, extra: number) =>
     (cover ? 0 : MARK_LEAD_MS / 1000) + extra + stepDelay(i) / 1000;
@@ -206,8 +218,8 @@ export default function PageTransition() {
       {[
         // back — dark: rides hidden under the light on the way in, trails it on the way out
         { tint: "bg-ink", extra: cover ? 0 : lag, mark: false },
-        // front — light: the only layer the outro shows, and the first to leave
-        { tint: "bg-graphite", extra: 0, mark: true },
+        // front — light: follows the dark in, leads the way out
+        { tint: "bg-graphite", extra: cover ? lag : 0, mark: true },
       ].map(({ tint, extra, mark }) =>
         Array.from({ length: N }, (_, i) => (
           <motion.div

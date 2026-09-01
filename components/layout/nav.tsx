@@ -30,7 +30,10 @@ const ITEM = "block rounded-full px-4 py-2.5 font-accent text-xs font-medium whi
 // same glass recipe for the logo chip and the pill, so the nav stays legible over the
 // ink blocks it floats across (a bare dark logo on an ink section disappears)
 const GLASS =
-  "rounded-full border border-white/70 bg-white/80 shadow-[0_8px_30px_rgba(26,26,26,0.12),inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-md backdrop-saturate-150";
+  // The blur is gated to pointer:fine. `backdrop-filter` is re-resolved against the page on
+  // every scroll frame, which is the single heaviest thing a fixed element can ask for on a
+  // phone — and at 80% white the chip already reads as glass without it.
+  "rounded-full border border-white/70 bg-white/80 shadow-[0_8px_30px_rgba(26,26,26,0.12),inset_0_1px_0_rgba(255,255,255,0.75)] fine:backdrop-blur-md fine:backdrop-saturate-150";
 const EASE_PANEL = [0.83, 0, 0.17, 1] as [number, number, number, number];
 
 const indexOf = (path: string) =>

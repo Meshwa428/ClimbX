@@ -97,7 +97,7 @@ export default function Stats() {
                   {/* One height for every tile, theirs is a flat 22.5rem — the spans carry the
                       asymmetry, the heights must not also. */}
                   <div
-                    className="flex h-full min-h-56 flex-col justify-between rounded-[2rem] p-8 md:min-h-64 md:p-10"
+                    className="flex h-full min-h-44 flex-col justify-between rounded-[2rem] p-7 sm:min-h-56 sm:p-8 md:min-h-64 md:p-10"
                     style={{ backgroundColor: TINT[i] }}
                   >
                     <s.Icon size={40} strokeWidth={1.75} className="text-ink" aria-hidden />
