@@ -27,24 +27,28 @@ import { usePathname, useRouter } from "next/navigation";
 //             Light → dark → page.
 // Same order read forwards and backwards, so the transition folds in on itself: the last thing
 // you see before the swap is the first thing to leave after it.
+// Budget. Every one of these is paid twice — once per stair, once per layer — so they compound
+// fast: the first pass at 460/85/150 plus a 220ms nav lead and a 120ms hold came to 2.5s of
+// curtain, most of it spent on a covered screen with nothing happening. Nobody waits that out.
+// The rule now is that no phase outlasts its own travel by more than the stagger it needs, and
+// the only time the screen is fully dark is however long `router.push` actually takes.
 const N = 6; // stairs across the width
-const COVER_MS = 460;
-const REVEAL_MS = 560;
-const LAYER_LAG_MS = 150;
+const COVER_MS = 340;
+const REVEAL_MS = 420;
+const LAYER_LAG_MS = 90;
 // The gap between one stair and the next. This is the knob that makes the staircase read: the
 // steps are not a shape any more, they are the stagger. Raise it for a slower, more deliberate
 // climb; at 0 the whole curtain is one flat sheet.
-const STEP_LAG_MS = 85;
-const HOLD_MS = 120; // beat on the covered state, so the swap doesn't read as a stutter
+const STEP_LAG_MS = 45;
 // A phase is not over until the last, most-delayed column has finished travelling.
 const TAIL_MS = (N - 1) * STEP_LAG_MS;
 // ponytail: if a navigation hangs, uncover anyway rather than leaving the reader staring at
 // a curtain. Generous, because the only cost of being wrong is a slightly late reveal.
 const SAFETY_MS = 2000;
-// Head start so the nav pill finishes sliding to the new tab *before* the curtain covers it.
-// Nav listens for `climbx:navigate` and moves optimistically.
+// Nav listens for `climbx:navigate` and slides its pill to the new tab optimistically. It used
+// to get a 220ms head start before the curtain moved, which was 220ms of a page doing nothing;
+// the pill can perfectly well slide *while* the curtain climbs over it.
 export const NAV_EVENT = "climbx:navigate";
-const NAV_LEAD_MS = 220;
 
 const EASE = [0.83, 0, 0.17, 1] as [number, number, number, number];
 
@@ -91,7 +95,7 @@ export default function PageTransition() {
       window.dispatchEvent(new CustomEvent(NAV_EVENT, { detail: target }));
       router.prefetch(target);
 
-      await new Promise((r) => setTimeout(r, NAV_LEAD_MS + COVER_MS + TAIL_MS + LAYER_LAG_MS));
+      await new Promise((r) => setTimeout(r, COVER_MS + TAIL_MS + LAYER_LAG_MS));
       await new Promise<void>((resolve) => {
         const t = setTimeout(resolve, SAFETY_MS);
         resolveRef.current = () => {
@@ -100,9 +104,7 @@ export default function PageTransition() {
         };
         router.push(href);
       });
-      await new Promise((r) => setTimeout(r, HOLD_MS));
-
-      setPhase("reveal");
+      setPhase("reveal"); // the instant the route has rendered — no beat on the dark
       await new Promise((r) => setTimeout(r, REVEAL_MS + TAIL_MS + LAYER_LAG_MS));
       setPhase("idle"); // snaps back below the fold, off-screen, with no animation
     },

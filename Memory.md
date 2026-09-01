@@ -226,6 +226,12 @@ Read `cuberto.com/assets/js/bundle.js` + their inlined CSS directly rather than 
     first, uncovering the dark still standing, which then goes too (light → dark → page). The
     transition folds in on itself — the last thing seen before the swap is the first to leave
     after it. The cover wait has to include `LAYER_LAG_MS` now that the cover staggers too.
+    **Budget discipline matters here**: every duration is paid twice, once per stair and once
+    per layer, so they compound. The first cut (460/85/150 + a 220ms nav lead + a 120ms hold)
+    came to **2.5s**, most of it a covered screen with nothing moving. Now 340/45/90, no lead
+    (the nav pill slides *while* the curtain climbs, it never needed a head start) and no hold
+    (reveal fires the instant the route renders) — **1.39s**, and the only fully dark moment is
+    however long `router.push` actually takes.
   - Preloader: a second pair of clipped halves rendered *first* (so it sits behind) and given
     the same 160ms exit delay. Both seams land on identical geometry, so the back fill only
     ever shows as the light pair's own colour. `GONE_MS` extended by the lag.
