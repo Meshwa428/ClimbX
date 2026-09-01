@@ -209,10 +209,17 @@ Read `cuberto.com/assets/js/bundle.js` + their inlined CSS directly rather than 
     `-group` › `-image-pair` › the snapshots), so a second curtain layer can only live on an
     *ancestor* of the page — and clipping an ancestor clips the page with it. Two independent
     layers are impossible there. As siblings in the DOM it is trivial.
-    Geometry changed too: one stepped panel travelling **upward only** — out of the bottom edge
-    to cover, then onward off the top to uncover from the bottom up. Same staircase profile
-    leads on the way in and the way out (it is cut into both the top and bottom edges of one
-    200vh panel, translated in vh). Replaces the old pair of straps closing in from both edges.
+    Geometry changed too: the curtain travels **upward only** — out of the bottom edge to cover,
+    then onward off the top to uncover from the bottom up. Replaces the old pair of straps
+    closing in from both edges.
+    **The staircase is made of time, not of a polygon.** The curtain is N full-height columns,
+    each starting `STEP_LAG_MS` after the one to its right, so the leading edge steps as it
+    climbs and the step depth is however far a column travels in that lag. Cutting the stairs
+    into a `clip-path` and translating the whole thing rigidly (the first attempt) produced the
+    correct shape and no visible steps at all — a rigid edge crossing the viewport in half a
+    second reads as a slope, not a staircase. `STEP_LAG_MS` is now the knob for the whole
+    effect; at 0 the curtain is one flat sheet. Columns overlap by 1px, or fractional viewport
+    widths leave hairline seams of page showing through.
     Cover is one layer by design; only the reveal staggers. Front layer is the *lighter* one and
     leads; the darker trails behind it (this was inverted first time round).
   - Preloader: a second pair of clipped halves rendered *first* (so it sits behind) and given

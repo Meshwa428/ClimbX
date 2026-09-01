@@ -24,10 +24,17 @@ import { usePathname, useRouter } from "next/navigation";
 //   • front — the lighter one. Leads, and is the only layer the outro shows.
 //   • back  — the darker one. Trails by LAYER_LAG_MS on the reveal, so the light curtain
 //             peels up to expose a dark one still standing, which then peels to the page.
-const COVER_MS = 620;
-const REVEAL_MS = 720;
+const N = 6; // stairs across the width
+const COVER_MS = 460;
+const REVEAL_MS = 560;
 const LAYER_LAG_MS = 150;
+// The gap between one stair and the next. This is the knob that makes the staircase read: the
+// steps are not a shape any more, they are the stagger. Raise it for a slower, more deliberate
+// climb; at 0 the whole curtain is one flat sheet.
+const STEP_LAG_MS = 85;
 const HOLD_MS = 120; // beat on the covered state, so the swap doesn't read as a stutter
+// A phase is not over until the last, most-delayed column has finished travelling.
+const TAIL_MS = (N - 1) * STEP_LAG_MS;
 // ponytail: if a navigation hangs, uncover anyway rather than leaving the reader staring at
 // a curtain. Generous, because the only cost of being wrong is a slightly late reveal.
 const SAFETY_MS = 2000;
@@ -38,28 +45,20 @@ const NAV_LEAD_MS = 220;
 
 const EASE = [0.83, 0, 0.17, 1] as [number, number, number, number];
 
-// The staircase. N treads climbing left → right across the full width, cut into the top and
-// bottom edges of one tall panel so the same profile leads on the way in and on the way out.
-// Coordinates are % of the panel, which is 200vh tall — so AMP (10%) is 20vh of step depth.
-const N = 6;
-const AMP = 10;
-const stair = (from: number) => {
-  const pts: string[] = [];
-  for (let i = 0; i <= N; i++) {
-    const x = (i * 100) / N;
-    const y = from - (i * AMP) / N;
-    if (i > 0) pts.push(`${x}% ${y + AMP / N}%`); // tread
-    pts.push(`${x}% ${y}%`); // riser
-  }
-  return pts;
-};
-// top edge climbs from AMP to 0, bottom edge climbs from 100 to 100-AMP; right side joins them
-const CLIP = `polygon(${[...stair(AMP), ...stair(100).reverse()].join(", ")})`;
-
-// Panel travel, in vh. Its top edge sits at Y, its solid middle spans Y+20vh → Y+180vh.
-const HIDDEN = 100; // wholly below the fold
-const COVERED = -50; // solid middle straddles the viewport
-const GONE = -200; // wholly above the fold
+// The staircase is built out of *time*, not out of a polygon. The curtain is N full-height
+// columns and each one starts a beat after the one to its right, so the leading edge steps as
+// it climbs — and the step depth is however far a column travels in STEP_LAG_MS, which is what
+// makes it visible at speed. The previous pass cut the stairs into a clip-path and translated
+// the whole thing rigidly; the shape was correct and completely unreadable, because a rigid
+// edge crossing the viewport in half a second has no steps to see, only a slope.
+//
+// Right-hand column leads, so the edge rides up to the right — the same direction as the climb
+// the brand is named for, and the same one the intro loader's staircase runs.
+//
+// Each column travels its own height: below the fold → covering → off the top.
+const HIDDEN = "100%";
+const COVERED = "0%";
+const GONE = "-100%";
 
 type Phase = "idle" | "cover" | "reveal";
 
@@ -89,7 +88,7 @@ export default function PageTransition() {
       window.dispatchEvent(new CustomEvent(NAV_EVENT, { detail: target }));
       router.prefetch(target);
 
-      await new Promise((r) => setTimeout(r, NAV_LEAD_MS + COVER_MS));
+      await new Promise((r) => setTimeout(r, NAV_LEAD_MS + COVER_MS + TAIL_MS));
       await new Promise<void>((resolve) => {
         const t = setTimeout(resolve, SAFETY_MS);
         resolveRef.current = () => {
@@ -101,7 +100,7 @@ export default function PageTransition() {
       await new Promise((r) => setTimeout(r, HOLD_MS));
 
       setPhase("reveal");
-      await new Promise((r) => setTimeout(r, REVEAL_MS + LAYER_LAG_MS));
+      await new Promise((r) => setTimeout(r, REVEAL_MS + TAIL_MS + LAYER_LAG_MS));
       setPhase("idle"); // snaps back below the fold, off-screen, with no animation
     },
     [router, reduce],
@@ -138,20 +137,32 @@ export default function PageTransition() {
   const ms = phase === "cover" ? COVER_MS : REVEAL_MS;
 
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-[95] h-screen overflow-hidden">
+    <div aria-hidden className="pointer-events-none fixed inset-0 z-[95] overflow-hidden">
       {[
-        { tint: "bg-ink", delay: lag }, // back — darker, trails on the reveal
-        { tint: "bg-graphite", delay: 0 }, // front — lighter, leads and carries the outro alone
-      ].map(({ tint, delay }) => (
-        <motion.div
-          key={tint}
-          className={`absolute inset-x-0 top-0 ${tint}`}
-          style={{ height: "200vh", clipPath: CLIP, WebkitClipPath: CLIP, willChange: "transform" }}
-          initial={{ y: `${HIDDEN}vh` }}
-          animate={{ y: `${y}vh` }}
-          transition={{ duration: ms / 1000, ease: EASE, delay }}
-        />
-      ))}
+        { tint: "bg-ink", extra: lag }, // back — darker, trails on the reveal
+        { tint: "bg-graphite", extra: 0 }, // front — lighter, leads and carries the outro alone
+      ].map(({ tint, extra }) =>
+        Array.from({ length: N }, (_, i) => (
+          <motion.div
+            key={`${tint}-${i}`}
+            className={`absolute top-0 h-full ${tint}`}
+            style={{
+              // +1px so neighbouring columns overlap; at fractional viewport widths an exact
+              // split leaves hairline seams of page showing through the curtain.
+              left: `${(i * 100) / N}%`,
+              width: `calc(${100 / N}% + 1px)`,
+              willChange: "transform",
+            }}
+            initial={{ y: HIDDEN }}
+            animate={{ y }}
+            transition={{
+              duration: ms / 1000,
+              ease: EASE,
+              delay: extra + ((N - 1 - i) * STEP_LAG_MS) / 1000,
+            }}
+          />
+        )),
+      )}
     </div>
   );
 }
