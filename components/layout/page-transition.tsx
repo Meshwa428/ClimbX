@@ -228,7 +228,10 @@ export default function PageTransition() {
           alt=""
           width={186}
           height={52}
-          className="h-9 w-auto md:h-11"
+          // Big enough to be the thing on the screen rather than a detail on it — this is the
+          // only content the covered state has. `max-w` so the lockup can't run off a narrow
+          // viewport, since it is ~3.6:1.
+          className="h-16 w-auto max-w-[72vw] object-contain md:h-24"
         />
       </motion.div>
     </div>
