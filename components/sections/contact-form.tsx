@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PillButton } from "@/components/sections/kit";
 
 // ponytail: no backend. The form composes a mailto and hands off to the reader's mail client
 // — the inbox on the other end is a Gmail address either way, and a real POST route needs the
@@ -91,13 +92,7 @@ export default function ContactForm() {
       </label>
 
       <div className="flex flex-wrap items-center gap-4">
-        <button
-          type="submit"
-          data-cursor="button"
-          className="inline-flex items-center justify-center rounded-full bg-ink px-9 py-4 font-accent text-base font-medium text-white transition-colors duration-300 ease-out hover:bg-graphite focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-[0.98]"
-        >
-          Start the climb
-        </button>
+        <PillButton type="submit">Start the climb</PillButton>
         {/* polite, not assertive: the reader is mid-handoff to their mail client */}
         <p aria-live="polite" className="text-sm text-graphite">
           {sent

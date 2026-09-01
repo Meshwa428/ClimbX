@@ -112,7 +112,9 @@ export default function Nav() {
       <header className="fixed inset-x-0 top-0 z-50">
         {/* same gutter + measure as SECTION/CONTAINER, so the logo sits on the exact
             left edge every headline on the site starts from */}
-        <div className="px-6 py-4 md:px-16 md:py-5">
+        {/* half the padding it had — the chip carries its own presence, the air above it was
+            only making the page start late */}
+        <div className="px-6 py-2 md:px-16 md:py-2.5">
           <div className="mx-auto grid max-w-6xl grid-cols-[1fr_auto] items-center gap-3 lg:grid-cols-[1fr_auto_1fr]">
             {/* logo — rides its own glass chip so it survives the dark sections */}
             <Link

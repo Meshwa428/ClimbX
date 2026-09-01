@@ -164,7 +164,13 @@ const SplitText = ({
       display: 'inline-block',
       whiteSpace: 'normal',
       wordWrap: 'break-word',
-      willChange: 'transform, opacity'
+      willChange: 'transform, opacity',
+      // Our display headings run `leading-[0.95]`, i.e. a line box shorter than the type it
+      // holds — so descenders (y, g, p) fall outside it and this root's `overflow: hidden`
+      // cuts them off. Pad the box down to clear them and pull the same amount back off the
+      // margin, so nothing below moves. In em, so it scales with whatever size it is used at.
+      paddingBottom: '0.18em',
+      marginBottom: '-0.18em'
     };
     const classes = `split-parent ${className}`;
     const Tag = tag || 'p';

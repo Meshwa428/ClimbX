@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { motion, useMotionValue, useReducedMotion, useSpring } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import SplitText from "@/components/reactbits/SplitText";
 import { CONTAINER } from "@/components/sections/layout";
 
@@ -21,13 +21,20 @@ export function Reveal({
   className?: string;
 }) {
   const reduce = useReducedMotion();
+  // Cuberto's `Ul` helper, verbatim: 70px of travel over 2s on expo.out, with the fade
+  // finishing in half that. The long tail is the point — 18px in 600ms is over before the eye
+  // registers it started, which is why the work images read as popping into place. Split
+  // durations, because one 2s fade would leave the card ghosted for most of its travel.
   return (
     <motion.div
       className={className}
-      initial={reduce ? false : { opacity: 0, y: 18 }}
+      initial={reduce ? false : { opacity: 0, y: 70 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-80px" }}
-      transition={{ duration: 0.6, ease: EASE, delay }}
+      transition={{
+        y: { duration: 2, ease: EASE, delay },
+        opacity: { duration: 1, delay },
+      }}
     >
       {children}
     </motion.div>
@@ -118,51 +125,6 @@ export function PageHead({
   );
 }
 
-// Magnetic — the counterpart to the guitar string: the string is shoved away by the cursor,
-// a button leans *into* it. Anything that can be pressed pulls toward the pointer inside its
-// own box and springs back on exit, so the page's two pointer behaviours read as one physics.
-// Pointer-fine only (a touch device has no hover to lean into) and reduced motion opts out.
-// `pull` is the fraction of the offset it travels — past ~0.4 the label detaches from its box.
-export function Magnetic({
-  children,
-  pull = 0.3,
-  className = "",
-}: {
-  children: React.ReactNode;
-  pull?: number;
-  className?: string;
-}) {
-  const box = useRef<HTMLSpanElement>(null);
-  const reduce = useReducedMotion();
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  // Soft spring, no bounce: a button that wobbles reads as broken, not playful.
-  const x = useSpring(mx, { stiffness: 260, damping: 22, mass: 0.4 });
-  const y = useSpring(my, { stiffness: 260, damping: 22, mass: 0.4 });
-
-  if (reduce) return <span className={className}>{children}</span>;
-
-  return (
-    <motion.span
-      ref={box}
-      style={{ x, y }}
-      className={`inline-block ${className}`}
-      onPointerMove={(e) => {
-        if (e.pointerType !== "mouse") return;
-        const r = box.current!.getBoundingClientRect();
-        mx.set((e.clientX - (r.left + r.width / 2)) * pull);
-        my.set((e.clientY - (r.top + r.height / 2)) * pull);
-      }}
-      onPointerLeave={() => {
-        mx.set(0);
-        my.set(0);
-      }}
-    >
-      {children}
-    </motion.span>
-  );
-}
-
 // Disclosure — one row of an accordion (FAQ, legal pages). The open/shut animation is the
 // same `grid-template-rows: 0fr → 1fr` idiom the home services stack uses, so disclosure
 // feels identical everywhere on the site. A real <button> with aria-expanded, because this
@@ -227,41 +189,58 @@ export function Disclosure({
   );
 }
 
-// Buttons: solid ink pill is primary (same shape as the hero CTA), outline is secondary.
-// No gradients — the brand orange stays a micro-accent, never a surface.
-export function PillLink({
-  href,
-  children,
-  variant = "solid",
-  onDark = false,
-  className = "",
-}: {
-  href: string;
+// Buttons. One shape for the whole site: solid ink pill is primary, outline is secondary,
+// and the hover is Cuberto's `.cb-btn_cta` — the flood + text roll defined in `globals.css`.
+// `onDark` is the only knob: it swaps `--pill-ink`/`--pill-bg`, and the flood, the border and
+// the incoming label all follow from those two.
+//
+// No magnetic pull any more. It fought the flood — the box drifting under the pointer while
+// ink climbed it read as two effects arguing, and the button that has to be chased is worse
+// than the one that stays put.
+type PillProps = {
   children: React.ReactNode;
   variant?: "solid" | "ghost";
   onDark?: boolean;
   className?: string;
-}) {
-  const skin =
-    variant === "solid"
-      ? onDark
-        ? "bg-white text-ink hover:bg-white/90"
-        : "bg-ink text-white hover:bg-graphite"
-      : onDark
-        ? "border border-white/30 text-white hover:bg-white hover:text-ink"
-        : "border border-ink/25 text-ink hover:bg-ink hover:text-white";
-  // Every primary button on the site is magnetic — one wrapper here instead of a decision at
-  // each call site, so no page ends up with a button that behaves differently.
+};
+
+const pillClass = ({ variant = "solid", onDark = false, className = "" }: PillProps) =>
+  `pill ${variant === "solid" ? "-solid" : "-ghost"} ${onDark ? "-on-dark" : ""} cursor-pointer px-9 py-4 font-accent text-base font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${className}`;
+
+// The label is rendered twice on purpose: the second copy is the one waiting below the clip,
+// already the colour it needs to be once the flood has covered the button.
+function PillBody({ children, variant = "solid" }: PillProps) {
   return (
-    <Magnetic>
-      <Link
-        href={href}
-        data-cursor="button"
-        className={`inline-flex cursor-pointer items-center justify-center rounded-full px-9 py-4 font-accent text-base font-medium transition-colors duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-[0.98] ${skin} ${className}`}
-      >
-        {children}
-      </Link>
-    </Magnetic>
+    <>
+      {variant === "ghost" && <span aria-hidden className="pill-border" />}
+      <span aria-hidden className="pill-ripple">
+        <span />
+      </span>
+      <span className="pill-label">
+        <span>{children}</span>
+        <span aria-hidden>{children}</span>
+      </span>
+    </>
+  );
+}
+
+export function PillLink({ href, ...p }: PillProps & { href: string }) {
+  return (
+    <Link href={href} data-cursor="button" className={pillClass(p)}>
+      <PillBody {...p} />
+    </Link>
+  );
+}
+
+export function PillButton({
+  type = "button",
+  onClick,
+  ...p
+}: PillProps & { type?: "button" | "submit"; onClick?: () => void }) {
+  return (
+    <button type={type} onClick={onClick} data-cursor="button" className={pillClass(p)}>
+      <PillBody {...p} />
+    </button>
   );
 }
 

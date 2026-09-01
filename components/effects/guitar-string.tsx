@@ -2,24 +2,36 @@
 
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
-import { repelTarget } from "@/lib/strings";
 
-// Elastic guitar-string section divider (Cuberto-inspired). An SVG quadratic Bézier line the
-// cursor **pushes away** — a string above the pointer bows further up, one below bows further
-// down — then snaps back with a damped elastic oscillation when the pointer leaves, like a
-// plucked string. Custom component: no shadcn/React Bits equivalent (RULES.md §1).
-// Respects prefers-reduced-motion (renders as a static line).
+// Elastic guitar-string section divider. An SVG quadratic Bezier the cursor drags and shoves,
+// which rings back down when the pointer leaves. Custom component: no shadcn/React Bits
+// equivalent (RULES.md §1). Respects prefers-reduced-motion (renders as a static line).
 //
-// It used to tween the control point straight onto the cursor, which read as the string being
-// stuck to the pointer and dragged around. Repelling is the physical behaviour: a real string
-// gets shoved out of the way, it never follows your hand. Shared with the easter egg overlay
-// (components/effects/strings.tsx) via `lib/strings.js` — check: node scripts/check-strings.mjs.
+// Cuberto's `.cb-divider` (cuberto.com/assets/js/bundle.js + their inlined CSS), geometry and
+// all — and the geometry is the part we had wrong. Their numbers:
+//
+//   .cb-divider        height: 1px                       ← the line itself
+//   .cb-divider:before top:-1rem; height:2rem            ← the hit band: 20px, pointer:fine only
+//   .cb-divider svg    top:-99px; height:200px           ← the drawing box, overflowing both ways
+//   path               M0,100 Q x,y w,100                ← rest at y=100, no viewBox (units are px)
+//   y = 2*cursorY - 100 ± 50                             ← gain 2 + a side offset
+//
+// The band is 20px tall, so `2*cursorY - 100` only ever moves ±20 — the bow is essentially the
+// constant ±50 offset, gently modulated. Ours ran the same formula over a 104px band, so the
+// control point swung ±104 and the string whipped after the cursor across the whole row in
+// 0.2s. That is the "too fast, not fluid": the formula was right and the box was wrong. The
+// tall SVG is not a hit area, it is only room for the 2s elastic ring to overshoot into.
+const BOX = 200; // svg height in px = its user units; rest line sits at BOX/2
+const REST = BOX / 2;
+const REACH = 20; // the pointer band, centred on the line — everything else is spillover room
+const SIDE = 50; // constant shove, signed by which half you entered from
+
 interface GuitarStringProps {
   className?: string;
   /** Line stroke color — solid by default; a divider is a string, not a hairline rule */
   color?: string;
   strokeWidth?: number;
-  /** Total hit-area height in px */
+  /** Row height in px — layout air around the line, not the hit area (see REACH) */
   height?: number;
 }
 
@@ -42,134 +54,77 @@ export default function GuitarString({
   height = 100,
 }: GuitarStringProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const hitRef = useRef<HTMLDivElement>(null);
   const pathRef = useRef<SVGPathElement>(null);
-
-  // Resting Y sits at the vertical center of the hit area
-  const defaultY = height / 2;
-  const point = useRef({ x: 500, y: defaultY });
-  const hovered = useRef(false);
 
   useEffect(() => {
     const container = containerRef.current;
+    const hit = hitRef.current;
     const path = pathRef.current;
-    if (!container || !path) return;
+    if (!container || !hit || !path) return;
 
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
+    const point = { x: container.clientWidth / 2, y: REST };
     const draw = () => {
-      const w = container.clientWidth;
-      path.setAttribute(
-        "d",
-        `M 0 ${defaultY} Q ${point.current.x} ${point.current.y} ${w} ${defaultY}`,
-      );
+      path.setAttribute("d", `M 0 ${REST} Q ${point.x} ${point.y} ${container.clientWidth} ${REST}`);
     };
-
-    // Initialise at center
-    point.current.x = container.clientWidth / 2;
     draw();
 
-    if (reduce) return; // static line, no interaction
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return; // static line
 
-    // We want the string to feel highly reactive and repulsive.
-    // - reach = height * 0.7 ensures the string starts reacting the moment the cursor enters
-    //   the container bounds, eliminating any dead zones at the edges.
-    // - push = height * 0.38 allows for a more tactile, deep bend.
-    // - LIMIT = push * 1.8 allows the string to bow further before snapping and releasing.
-    const reach = height * 0.7;
-    const push = height * 0.38;
-    // The bow maxes out at `push * 2` (the control point sits at twice the apex), so a limit
-    // of 1.8 leaves a 10% window — the cursor had to land within ~2px of the line or the
-    // string never let go at all, it just stayed glued to the pointer. 1.25 releases once the
-    // cursor is inside ~13px, which is a pluck you can actually perform.
-    const LIMIT = push * 1.25;
-    // While it is ringing the cursor is not holding it any more, so tracking is off. That is
-    // the whole trick: track → snap → ring → track again. The flag is cleared from the ring's
-    // `onComplete` — the instant the string stops moving it can be grabbed again, with no
-    // timer to guess at. (It must not be cleared from `onUpdate` by reading the tween: that
-    // reference runs before the variable is assigned and the string stays dead for good.)
-    let ringing = false;
-
-    // Twang: overshoot rest and ring around it. `elastic.out(amplitude, period)` — a short
-    // period is what makes it read as a string rather than a rubber band.
-    //
-    // `elastic.out(1.3, 0.22)` is a pronounced vibration, and its tail is inaudibly small long
-    // before the tween's 0.95s is up. So the lock is not a timer and not the tween's length:
-    // it lifts the frame the string has actually **stopped moving** — sitting on its rest line
-    // and barely travelling between frames. Both tests are needed; at a zero crossing it is on
-    // the rest line at full speed, which is the opposite of settled.
-    const twang = () => {
-      ringing = true;
-      let prev = point.current.y;
-      gsap.to(point.current, {
-        y: defaultY,
-        duration: 0.95,
-        ease: "elastic.out(1.3, 0.22)",
-        overwrite: "auto",
-        onUpdate: () => {
-          draw();
-          const y = point.current.y;
-          if (Math.abs(y - defaultY) < 0.5 && Math.abs(y - prev) < 0.15) ringing = false;
-          prev = y;
-        },
-        onComplete: () => {
-          ringing = false; // backstop, in case the tween is cut short before it settles
-        },
-      });
-    };
+    // Which way the string gets shoved is decided once, by the half you crossed into — not
+    // re-derived per move, or it would flip sign as you pass the rest line.
+    let side = 0;
 
     const onMove = (e: MouseEvent) => {
-      if (ringing) return; // still swinging — a chase here would cut the note short
-      const rect = container.getBoundingClientRect();
-      point.current.x = e.clientX - rect.left;
-      // A quadratic's midpoint is only a quarter of the way to its control point, so the
-      // control sits at 2x the displacement we actually want to see.
-      const target = defaultY + repelTarget(defaultY, e.clientY - rect.top, reach, push) * 2;
-
-      if (Math.abs(target - defaultY) >= LIMIT) return twang(); // stretched too far — released
-
-      // Tracking the cursor is a chase, not a spring: an elastic tween restarted on every
-      // mousemove would fight itself and read as jitter.
-      // Reduced duration to 0.1s and sharpened ease to power3.out to make it feel super reactive.
-      gsap.to(point.current, {
-        y: target,
-        duration: 0.1,
-        ease: "power3.out",
+      // Measured against the *drawing box*, not the band: the formula's `100` is the rest
+      // line in svg units, so the cursor has to be in those units too.
+      const rect = hit.getBoundingClientRect();
+      const my = REST + (e.clientY - rect.top - REACH / 2);
+      if (!side) side = my < REST ? SIDE : -SIDE;
+      point.x = e.clientX - rect.left;
+      gsap.to(point, {
+        y: 2 * my - REST + side,
+        duration: 0.2,
+        ease: "power2.out",
         onUpdate: draw,
-        overwrite: "auto",
+        overwrite: true,
       });
     };
 
-    const onEnter = () => {
-      hovered.current = true;
-    };
-
+    // Twang: overshoot rest and ring around it, x recentring on the same curve so the bow
+    // unwinds sideways as well as vertically. Long on purpose — the slow ring is what reads
+    // as a string rather than a snap.
     const onLeave = () => {
-      hovered.current = false;
-      twang(); // walked away with it still bent — same release
+      side = 0;
+      gsap.to(point, {
+        x: container.clientWidth / 2,
+        y: REST,
+        duration: 2,
+        ease: "elastic.out(1, 0.2)",
+        onUpdate: draw,
+        overwrite: true,
+      });
     };
 
     const onResize = () => {
-      if (!hovered.current) {
-        point.current.x = container.clientWidth / 2;
-        point.current.y = defaultY;
+      if (!gsap.isTweening(point)) {
+        point.x = container.clientWidth / 2;
+        point.y = REST;
       }
       draw();
     };
 
-    container.addEventListener("mousemove", onMove);
-    container.addEventListener("mouseenter", onEnter);
-    container.addEventListener("mouseleave", onLeave);
+    hit.addEventListener("mousemove", onMove);
+    hit.addEventListener("mouseleave", onLeave);
     window.addEventListener("resize", onResize);
 
-    const pt = point.current;
     return () => {
-      gsap.killTweensOf(pt); // a tween still running would draw into a dead path
-      container.removeEventListener("mousemove", onMove);
-      container.removeEventListener("mouseenter", onEnter);
-      container.removeEventListener("mouseleave", onLeave);
+      gsap.killTweensOf(point); // a tween still running would draw into a dead path
+      hit.removeEventListener("mousemove", onMove);
+      hit.removeEventListener("mouseleave", onLeave);
       window.removeEventListener("resize", onResize);
     };
-  }, [defaultY, height]);
+  }, [height]);
 
   return (
     <div
@@ -178,10 +133,20 @@ export default function GuitarString({
       style={{ height: `${height}px` }}
       aria-hidden="true"
     >
-      <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
+      {/* The band. Narrow, centred, and the only thing that hears the pointer — the svg is
+          three times taller purely so the ring has somewhere to overshoot. */}
+      <div
+        ref={hitRef}
+        className="absolute inset-x-0 top-1/2 -translate-y-1/2"
+        style={{ height: `${REACH}px` }}
+      />
+      <svg
+        className="pointer-events-none absolute inset-x-0 top-1/2 overflow-visible"
+        style={{ height: `${BOX}px`, marginTop: `${-REST}px` }}
+      >
         <path
           ref={pathRef}
-          d={`M 0 ${defaultY} Q 500 ${defaultY} 1000 ${defaultY}`}
+          d={`M 0 ${REST} Q 500 ${REST} 1000 ${REST}`}
           fill="none"
           stroke={color}
           strokeWidth={strokeWidth}

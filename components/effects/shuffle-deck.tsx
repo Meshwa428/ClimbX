@@ -67,6 +67,7 @@ export default function ShuffleDeck({
   maxBlur?: number;
   className?: string;
 }) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const imgRefs = useRef<(HTMLImageElement | null)[]>([]);
 
@@ -123,7 +124,6 @@ export default function ShuffleDeck({
       return;
     }
 
-    const delta: S[] = Array.from({ length: SLOTS }, () => ({ x: 0, y: 0, s: 0, b: 0 }));
     let next = SLOTS % n;
     let prevTick = 0;
     let raf = 0;
@@ -138,12 +138,6 @@ export default function ShuffleDeck({
       const tick = Math.floor(el0 / swapEvery);
 
       if (tick !== prevTick) {
-        // Freeze each card's role-change offset (old slot − new slot); orbit stays live.
-        for (let i = 0; i < SLOTS; i++) {
-          const o = target(i, prevTick, orbit);
-          const nw = target(i, tick, orbit);
-          delta[i] = { x: o.x - nw.x, y: o.y - nw.y, s: o.s - nw.s, b: o.b - nw.b };
-        }
         prevTick = tick;
         swapStartMs = now;
         // Schedule the recycle for the card entering BACK (seq 0), to fire when it has
@@ -158,26 +152,59 @@ export default function ShuffleDeck({
         pending = null;
       }
 
-      const w = 1 - ease(Math.min(1, (now - swapStartMs) / (swapDur * 1000))); // eased offset decay
+      const w = 1 - ease(Math.min(1, (now - swapStartMs) / (swapDur * 1000))); // 1 → 0
       for (let i = 0; i < SLOTS; i++) {
         const el = cardRefs.current[i];
         if (!el) continue;
-        const tg = target(i, tick, orbit); // continuous orbit — never gated
-        const d = delta[i];
+        // Blend the card's *outgoing* role into its incoming one, with both sampled at the
+        // live orbit angle. The previous pass froze the outgoing position at the moment the
+        // swap began and decayed a fixed offset — so the instant a role change started, the
+        // two cards involved stopped orbiting and slid down a straight line instead. Sampling
+        // both ends every frame means a card recedes to BACK *along the arc it was already
+        // travelling*, and the one coming forward keeps circling as it grows. The orbit never
+        // pauses for the swap; it carries it.
+        const to = target(i, tick, orbit);
+        const from = w > 0 ? target(i, tick - 1, orbit) : to;
         apply(
           el,
-          { x: tg.x + d.x * w, y: tg.y + d.y * w, s: tg.s + d.s * w, b: tg.b + d.b * w },
+          {
+            x: to.x + (from.x - to.x) * w,
+            y: to.y + (from.y - to.y) * w,
+            s: to.s + (from.s - to.s) * w,
+            b: to.b + (from.b - to.b) * w,
+          },
           i,
         );
       }
       raf = requestAnimationFrame(frame);
     };
-    raf = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(raf);
+
+    // The deck is a hero ornament, but the loop it ran was global: four blurred, z-ordered
+    // cards rewritten 60 times a second for the whole visit, including every screen where the
+    // hero is a thousand pixels above the fold. Nothing else on the page was paying for
+    // itself that way. Pause it off-screen — the orbit is a function of elapsed time, so it
+    // resumes where it would have been rather than where it stopped.
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
+          if (!raf) raf = requestAnimationFrame(frame);
+        } else if (raf) {
+          cancelAnimationFrame(raf);
+          raf = 0;
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    if (rootRef.current) io.observe(rootRef.current);
+
+    return () => {
+      io.disconnect();
+      cancelAnimationFrame(raf);
+    };
   }, [items, rx, ry, orbitSpeed, swapEvery, swapDur, focusScale, satScale, backScale, maxBlur]);
 
   return (
-    <div className={`relative ${className}`}>
+    <div ref={rootRef} className={`relative ${className}`}>
       {Array.from({ length: SLOTS }).map((_, k) => (
         <div
           key={k}

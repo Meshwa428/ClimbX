@@ -23,16 +23,27 @@ export default function Work() {
         <div className={CONTAINER}>
           <SectionTitle className="text-white">Climbs we&apos;ve led.</SectionTitle>
 
-          <div className="mt-16 grid gap-x-14 gap-y-14 md:mt-24 md:grid-cols-2 md:gap-y-20">
+          {/* Columns, not a grid: grid rows align, so a 4:3 card beside a 4:5 one leaves a
+              hole under the short one that no gap value can close. `columns-2` lets each
+              column flow at its own height, and on mobile it collapses to one in DOM order. */}
+          <div className="mt-16 md:mt-24 md:columns-2 md:gap-14">
             {work.map((w, i) => (
-              <Reveal key={w.client} className={i % 2 ? "md:mt-20" : ""}>
+              <Reveal
+                key={w.client}
+                delay={(i % 2) * 0.1} // their batch stagger — per column, not per card
+                className={`mb-14 break-inside-avoid md:mb-20 ${i === 2 ? "md:mt-20" : ""}`}
+              >
                 <Link href="/work" className="group block" data-cursor="explore">
                   <div className={`overflow-hidden rounded-2xl bg-white/5 ${w.ratio}`}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={`https://picsum.photos/seed/${w.seed}/900/1100`}
+                      src={`https://picsum.photos/seed/${w.seed}/700/875`}
                       alt=""
-                      className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                      loading="lazy"
+                      // The reveal animates the *card*; a lazily-decoded image can still land
+                      // inside a finished one and pop. Fade it in on its own decode.
+                      onLoad={(e) => e.currentTarget.classList.remove("opacity-0")}
+                      className="h-full w-full object-cover opacity-0 transition-[opacity,transform] duration-700 ease-out group-hover:scale-[1.03]"
                     />
                   </div>
                   <p className="mt-6 max-w-md text-lg leading-snug">
@@ -45,7 +56,7 @@ export default function Work() {
           </div>
 
           <Reveal delay={0.1}>
-            <div className="mt-20 flex justify-center md:mt-28">
+            <div className="mt-14 flex justify-center md:mt-20">
               <PillLink href="/work" variant="ghost" onDark>
                 Every climb so far
               </PillLink>
