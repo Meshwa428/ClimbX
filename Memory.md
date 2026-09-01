@@ -220,16 +220,19 @@ Read `cuberto.com/assets/js/bundle.js` + their inlined CSS directly rather than 
     second reads as a slope, not a staircase. `STEP_LAG_MS` is now the knob for the whole
     effect; at 0 the curtain is one flat sheet. Columns overlap by 1px, or fractional viewport
     widths leave hairline seams of page showing through.
-    The lighter panel is in front, so which layer you actually see is decided purely by which is
-    *late*, and the size of that gap is asymmetric on purpose (`COVER_LAG_MS` 60 vs
-    `REVEAL_LAG_MS` 130). **Out**, the gap must be small: both layers run their own six-column
-    stagger, so a wide gap sets two combs against each other and the dark shows through in
-    ragged chunks wherever the light hasn't caught up — worst along the left, which arrives a
-    full tail late. Narrow, it stops being a second curtain and becomes a leading *rim* on the
-    first: the page still darkens in two steps (which is what keeps a black sheet from just
-    appearing over a white page) but the edge stays one clean staircase. **Back**, the gap is
-    the whole point — the light has to clear far enough for the dark behind it to register as a
-    second layer before it leaves too. The cover wait has to include `LAYER_LAG_MS` now that the cover staggers too.
+    **The dark layer is in front and the light one leads.** What matters is the order of
+    *values*, not which panel is on top: a white page has nowhere to go but near-black in one
+    move, and one move reads as a slam. Two layers only soften that if the first to arrive is
+    genuinely light — the pair used to be `#1a1a1a` and `#2c2c2c`, two near-blacks pretending to
+    be a ramp. Now a mid grey (`color-mix(ink 32%, white)`) sweeps in first and ink lands on it:
+    white → grey → ink going out, ink → grey → page coming back. The mark rides the ink layer,
+    since a white lockup needs dark behind it.
+    This also fixes the ragged-chunks problem rather than working around it. Both layers run
+    their own six-column stagger, so between them there is always a torn edge where one has
+    arrived and the other hasn't. With the *dark* leading that edge was ink over a white page —
+    chunks torn out of the screen. With the *light* leading it is grey over the page, which is
+    the intended step, so the lag can be wide enough (150ms both ways) for the ramp to actually
+    register. The cover wait has to include `LAYER_LAG_MS` now that the cover staggers too.
     **Budget discipline matters here**: every duration is paid twice, once per stair and once
     per layer, so they compound. The first cut (460/85/150 + a 220ms nav lead + a 120ms hold)
     came to **2.5s**, most of it a covered screen with nothing moving. Now 340/45/90, no lead

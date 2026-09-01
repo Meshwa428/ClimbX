@@ -20,15 +20,18 @@ import { usePathname, useRouter } from "next/navigation";
 // the page — and clipping an ancestor clips the page with it. Two independent layers are
 // impossible there. Here they are two siblings, which is all this ever needed to be.
 //
-// Two layers, the lighter one in front — so which of them you actually see is decided purely by
-// which one is *late*. That is the only difference between the two halves:
-//   • cover  — dark leads, light lands on it a beat later. One sheet dropping onto a white page
-//              arrives as an event; staged, the page darkens in two steps and the curtain reads
-//              as something the page does rather than something placed on top of it.
-//   • reveal — the light goes first, uncovering the dark still standing, which then goes too.
-//              Light → dark → page.
-// The dark is also what the light peels back to reveal on the way out, so it has to make the
-// trip either way.
+// Two layers, and the **dark one is in front**. The point is the order of *values*, not which
+// panel happens to be on top: a white page has nowhere to go but straight to near-black in one
+// move, and one move is what reads as a slam. Two layers can only soften that if the first one
+// to arrive is genuinely light — the previous pair were `#1a1a1a` and `#2c2c2c`, which is two
+// near-blacks pretending to be a ramp.
+//   • cover  — mid grey sweeps in first, ink lands on it. White → grey → ink.
+//   • reveal — ink lifts, exposing the grey still standing, which lifts too. Ink → grey → page.
+// So the page darkens in two steps and brightens back in two, and the curtain reads as
+// something the page does rather than a sheet dropped on top of it.
+//
+// The mark rides the ink layer, because a white lockup needs the dark behind it.
+const TINT_STEP = "color-mix(in oklab, var(--color-ink) 32%, var(--pure-white))";
 // The curtain's own speed. Trimmed, but not to the bone: putting a mark on the covered state
 // means the covered state has to last long enough to read it, so the travel has to give that
 // time back. Every value here is paid twice — once per stair, once per layer — so `STEP_LAG_MS`
@@ -38,16 +41,13 @@ const COVER_MS = 400;
 const REVEAL_MS = 480;
 // How far the two layers separate. Asymmetric on purpose.
 //
-// On the way OUT the gap has to be small. Both layers run their own six-column stagger, so a
-// wide gap sets two combs against each other and the dark shows through in ragged chunks
-// wherever the light has not caught up — worst along the left, which arrives a full tail late.
-// Narrow, it stops being a second curtain and becomes a leading rim on the first: the page
-// still darkens in two steps, but the edge stays one clean staircase.
-//
-// On the way BACK the gap is the whole point — the light has to clear far enough for the dark
-// behind it to be read as a second layer before it goes too.
-const COVER_LAG_MS = 60;
-const REVEAL_LAG_MS = 130;
+// It has to be wide enough that the grey step is legible before the ink covers it, and this is
+// also why it can afford to be: with the light layer *leading*, the ragged edge you see between
+// the two combs is grey-over-page, which is the intended step. It was the other way round
+// before — dark leading meant the ragged edge was ink over a white page, and that read as
+// chunks torn out of the screen.
+const COVER_LAG_MS = 150;
+const REVEAL_LAG_MS = 150;
 // The gap between one stair and the next. This is the knob that makes the staircase read: the
 // steps are not a shape any more, they are the stagger. Raise it for a slower, more deliberate
 // climb; at 0 the whole curtain is one flat sheet.
@@ -216,16 +216,17 @@ export default function PageTransition() {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 z-[95] overflow-hidden">
       {[
-        // back — dark: rides hidden under the light on the way in, trails it on the way out
-        { tint: "bg-ink", extra: cover ? 0 : lag, mark: false },
-        // front — light: follows the dark in, leads the way out
-        { tint: "bg-graphite", extra: cover ? lag : 0, mark: true },
+        // back — the grey step: first in, last out
+        { tint: TINT_STEP, extra: cover ? 0 : lag, mark: false },
+        // front — the ink the covered state settles on, and what carries the mark
+        { tint: "var(--color-ink)", extra: cover ? lag : 0, mark: true },
       ].map(({ tint, extra, mark }) =>
         Array.from({ length: N }, (_, i) => (
           <motion.div
             key={`${tint}-${i}`}
-            className={`absolute top-0 h-full overflow-hidden ${tint}`}
+            className="absolute top-0 h-full overflow-hidden"
             style={{
+              backgroundColor: tint,
               left: `${(i * 100) / N}%`,
               width: `${100 / N}%`,
               willChange: "transform",
