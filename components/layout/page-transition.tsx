@@ -20,10 +20,13 @@ import { usePathname, useRouter } from "next/navigation";
 // the page — and clipping an ancestor clips the page with it. Two independent layers are
 // impossible there. Here they are two siblings, which is all this ever needed to be.
 //
-// Layers, and there are two only on the reveal (the cover is deliberately one flat move):
-//   • front — the lighter one. Leads, and is the only layer the outro shows.
-//   • back  — the darker one. Trails by LAYER_LAG_MS on the reveal, so the light curtain
-//             peels up to expose a dark one still standing, which then peels to the page.
+// Two layers, and both are visible in both directions. The lighter one is in front, so which
+// one you see is decided purely by which one is *late*:
+//   • cover  — dark goes first and the light follows onto it. Page → dark → light.
+//   • reveal — light goes first, uncovering the dark still standing, which then goes too.
+//             Light → dark → page.
+// Same order read forwards and backwards, so the transition folds in on itself: the last thing
+// you see before the swap is the first thing to leave after it.
 const N = 6; // stairs across the width
 const COVER_MS = 460;
 const REVEAL_MS = 560;
@@ -88,7 +91,7 @@ export default function PageTransition() {
       window.dispatchEvent(new CustomEvent(NAV_EVENT, { detail: target }));
       router.prefetch(target);
 
-      await new Promise((r) => setTimeout(r, NAV_LEAD_MS + COVER_MS + TAIL_MS));
+      await new Promise((r) => setTimeout(r, NAV_LEAD_MS + COVER_MS + TAIL_MS + LAYER_LAG_MS));
       await new Promise<void>((resolve) => {
         const t = setTimeout(resolve, SAFETY_MS);
         resolveRef.current = () => {
@@ -130,17 +133,17 @@ export default function PageTransition() {
 
   if (phase === "idle") return null;
 
-  const y = phase === "cover" ? COVERED : GONE;
-  // Only the reveal is staggered. On the cover both panels ride together, so the darker one
-  // stays hidden behind the lighter and the outro reads as a single sheet.
-  const lag = phase === "reveal" ? LAYER_LAG_MS / 1000 : 0;
-  const ms = phase === "cover" ? COVER_MS : REVEAL_MS;
+  const cover = phase === "cover";
+  const y = cover ? COVERED : GONE;
+  const ms = cover ? COVER_MS : REVEAL_MS;
+  // Whichever layer is late is the one you watch arrive, so the delay swaps between phases.
+  const lag = LAYER_LAG_MS / 1000;
 
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 z-[95] overflow-hidden">
       {[
-        { tint: "bg-ink", extra: lag }, // back — darker, trails on the reveal
-        { tint: "bg-graphite", extra: 0 }, // front — lighter, leads and carries the outro alone
+        { tint: "bg-ink", extra: cover ? 0 : lag }, // back — dark: leads in, follows out
+        { tint: "bg-graphite", extra: cover ? lag : 0 }, // front — light: follows in, leads out
       ].map(({ tint, extra }) =>
         Array.from({ length: N }, (_, i) => (
           <motion.div
