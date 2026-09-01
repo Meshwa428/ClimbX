@@ -32,6 +32,11 @@ import { usePathname, useRouter } from "next/navigation";
 //
 // The mark rides the ink layer, because a white lockup needs the dark behind it.
 const TINT_STEP = "color-mix(in oklab, var(--color-ink) 32%, var(--pure-white))";
+// Cast off the grey layer's leading edge. Negative Y because the curtain only ever travels
+// upward, so the shadow has to fall ahead of it, onto the page it is about to take. Only the
+// grey gets one: the ink rides in front of it, so an ink shadow would land on a surface
+// already covered and paint nothing.
+const STEP_SHADOW = "0 -14px 34px color-mix(in oklab, var(--color-ink) 38%, transparent)";
 // The curtain's own speed. Trimmed, but not to the bone: putting a mark on the covered state
 // means the covered state has to last long enough to read it, so the travel has to give that
 // time back. Every value here is paid twice — once per stair, once per layer — so `STEP_LAG_MS`
@@ -217,16 +222,17 @@ export default function PageTransition() {
     <div aria-hidden className="pointer-events-none fixed inset-0 z-[95] overflow-hidden">
       {[
         // back — the grey step: first in, last out
-        { tint: TINT_STEP, extra: cover ? 0 : lag, mark: false },
+        { tint: TINT_STEP, shadow: STEP_SHADOW, extra: cover ? 0 : lag, mark: false },
         // front — the ink the covered state settles on, and what carries the mark
-        { tint: "var(--color-ink)", extra: cover ? lag : 0, mark: true },
-      ].map(({ tint, extra, mark }) =>
+        { tint: "var(--color-ink)", shadow: "none", extra: cover ? lag : 0, mark: true },
+      ].map(({ tint, shadow, extra, mark }) =>
         Array.from({ length: N }, (_, i) => (
           <motion.div
             key={`${tint}-${i}`}
             className="absolute top-0 h-full overflow-hidden"
             style={{
               backgroundColor: tint,
+              boxShadow: shadow,
               left: `${(i * 100) / N}%`,
               width: `${100 / N}%`,
               willChange: "transform",
