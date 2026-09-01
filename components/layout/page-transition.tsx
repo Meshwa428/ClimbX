@@ -51,6 +51,9 @@ const SAFETY_MS = 2000;
 export const NAV_EVENT = "climbx:navigate";
 
 const EASE = [0.83, 0, 0.17, 1] as [number, number, number, number];
+// The house ease-out, for the mark's own exit. The curtain's curve is deliberately hard at both
+// ends — right for a sheet of ink, wrong for a logo lifting off.
+const EASE_MARK = [0.16, 1, 0.3, 1] as [number, number, number, number];
 
 // The staircase is built out of *time*, not out of a polygon. The curtain is N full-height
 // columns and each one starts a beat after the one to its right, so the leading edge steps as
@@ -79,8 +82,10 @@ const EASE = [0.83, 0, 0.17, 1] as [number, number, number, number];
 // Only ever a floor: a slow route waits as long as it needs and this costs nothing.
 const MIN_COVERED_MS = 280;
 // The mark clears out before the curtain does, so the page is never uncovered underneath a
-// logo that is still sitting there.
-const MARK_OUT_MS = 180;
+// logo that is still sitting there. It leaves the way the intro's does — lifting as it fades,
+// rather than dissolving on the spot.
+const MARK_OUT_MS = 260;
+const MARK_RISE = -34; // px it travels on the way out
 
 // Rightmost column leads, leftmost trails, on an even beat.
 const stepDelay = (i: number) => (N - 1 - i) * STEP_LAG_MS;
@@ -228,20 +233,26 @@ export default function PageTransition() {
                 style={{ left: `-${i * 100}%`, width: `${N * 100}%` }}
                 initial={{ y: "-100%", opacity: 1 }}
                 animate={cover ? { y: "0%", opacity: 1 } : { y: "100%", opacity: 0 }}
-                transition={{
-                  y: { duration: ms / 1000, ease: EASE, delay: colDelay(i, extra) },
-                  // The fade leads everything and ignores the stagger — one mark, one exit.
-                  opacity: { duration: MARK_OUT_MS / 1000, ease: "linear" },
-                }}
+                transition={{ duration: ms / 1000, ease: EASE, delay: colDelay(i, extra) }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/logo/climbx-logo-white.png"
-                  alt=""
-                  width={186}
-                  height={52}
-                  className="h-16 w-auto max-w-[72vw] object-contain md:h-24"
-                />
+                {/* The exit is its own layer, so it can move independently of the pinning
+                    above it: the wrapper is busy cancelling the column's travel, and the mark
+                    needs to lift on its own terms. Leads everything and ignores the stagger —
+                    six columns, one mark, one exit. */}
+                <motion.div
+                  initial={{ y: 0, opacity: 1 }}
+                  animate={cover ? { y: 0, opacity: 1 } : { y: MARK_RISE, opacity: 0 }}
+                  transition={{ duration: MARK_OUT_MS / 1000, ease: EASE_MARK }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/logo/climbx-logo-white.png"
+                    alt=""
+                    width={186}
+                    height={52}
+                    className="h-16 w-auto max-w-[72vw] object-contain md:h-24"
+                  />
+                </motion.div>
               </motion.div>
             )}
           </motion.div>

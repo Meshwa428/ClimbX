@@ -251,8 +251,10 @@ Read `cuberto.com/assets/js/bundle.js` + their inlined CSS directly rather than 
     are backed by the other. Each copy animates the **inverse** of its column's travel, so the
     mark stays pinned to the viewport centre and the stairs only uncover it — letting the copies
     ride with their columns tears the lockup into six pieces at six heights. On the way out the
-    mark fades first (`MARK_OUT_MS`) and the whole curtain waits on it, so the page is never
-    revealed under a logo still sitting there.
+    mark lifts as it fades (`MARK_OUT_MS`, `MARK_RISE`, house ease-out) and the whole curtain waits
+    on it, so the page is never revealed under a logo still sitting there. The exit is its own
+    nested layer — the wrapper above it is busy cancelling the column's travel, so the mark
+    needs a separate transform to move on its own terms.
     Tried and reverted at the user's request: distributing the column delays along a bezier
     (slow/fast/slow sweep) instead of an even beat. Worth remembering *why* it was fiddly if it
     ever comes back — the gap between two columns is the curve's *slope*, so "slow at the ends"
