@@ -27,16 +27,18 @@ import { usePathname, useRouter } from "next/navigation";
 //             Light → dark → page.
 // Same order read forwards and backwards, so the transition folds in on itself: the last thing
 // you see before the swap is the first thing to leave after it.
-// The curtain's own speed. Not the thing that made this feel slow — the dead air was all in
-// the middle (see `run` below), so these are back where they read best rather than rushed.
+// The curtain's own speed. Trimmed, but not to the bone: putting a mark on the covered state
+// means the covered state has to last long enough to read it, so the travel has to give that
+// time back. Every value here is paid twice — once per stair, once per layer — so `STEP_LAG_MS`
+// in particular is worth two of anything else.
 const N = 6; // stairs across the width
-const COVER_MS = 460;
-const REVEAL_MS = 560;
-const LAYER_LAG_MS = 150;
+const COVER_MS = 400;
+const REVEAL_MS = 480;
+const LAYER_LAG_MS = 120;
 // The gap between one stair and the next. This is the knob that makes the staircase read: the
 // steps are not a shape any more, they are the stagger. Raise it for a slower, more deliberate
 // climb; at 0 the whole curtain is one flat sheet.
-const STEP_LAG_MS = 85;
+const STEP_LAG_MS = 60;
 // A phase is not over until the last, most-delayed column has finished travelling.
 const TAIL_MS = (N - 1) * STEP_LAG_MS;
 // ponytail: if a navigation hangs, uncover anyway rather than leaving the reader staring at
@@ -48,6 +50,9 @@ const SAFETY_MS = 2000;
 export const NAV_EVENT = "climbx:navigate";
 
 const EASE = [0.83, 0, 0.17, 1] as [number, number, number, number];
+// The house ease-out for the mark — the curtain's own curve is deliberately harsh at both ends,
+// which is right for a sheet of ink and wrong for a logo.
+const EASE_MARK = [0.16, 1, 0.3, 1] as [number, number, number, number];
 
 // The staircase is built out of *time*, not out of a polygon. The curtain is N full-height
 // columns and each one starts a beat after the one to its right, so the leading edge steps as
@@ -59,6 +64,20 @@ const EASE = [0.83, 0, 0.17, 1] as [number, number, number, number];
 // Right-hand column leads, so the edge rides up to the right — the same direction as the climb
 // the brand is named for, and the same one the intro loader's staircase runs.
 //
+// The mark that rides the curtain. It has to arrive *late* — it sits above both layers, so
+// while columns are still climbing it would otherwise show through the gaps and float over the
+// outgoing page. Entering at 55% of the cover means most of the screen is already dark behind
+// it. Leaving is faster than arriving and starts immediately on the reveal, so it is gone
+// before the first column exposes any of the new page.
+const MARK_IN_MS = 380;
+const MARK_OUT_MS = 240;
+// A floor on the covered state, measured from the moment the page is hidden. Not the empty
+// hold this used to have — that one sat on a blank screen, which is exactly what made the
+// transition feel long. Now there is a mark up there, and with the route prefetched the push
+// can resolve in a frame, which would otherwise land and dismiss the logo in the same breath.
+// Only ever a floor: a slow route waits as long as it needs and this costs nothing.
+const MIN_COVERED_MS = 280;
+
 // Each column travels its own height: below the fold → covering → off the top.
 const HIDDEN = "100%";
 const COVERED = "0%";
@@ -95,6 +114,7 @@ export default function PageTransition() {
       // lands — not when the whole phase ends. The trailing layer is still settling onto an
       // already-covered screen, so the navigation gets those LAYER_LAG_MS for free.
       await new Promise((r) => setTimeout(r, COVER_MS + TAIL_MS));
+      const coveredAt = performance.now();
       await new Promise<void>((resolve) => {
         const t = setTimeout(resolve, SAFETY_MS);
         resolveRef.current = () => {
@@ -103,6 +123,8 @@ export default function PageTransition() {
         };
         router.push(href);
       });
+      const left = MIN_COVERED_MS - (performance.now() - coveredAt);
+      if (left > 0) await new Promise((r) => setTimeout(r, left));
       setPhase("reveal"); // the instant the route has rendered — no beat on the dark
       await new Promise((r) => setTimeout(r, REVEAL_MS + TAIL_MS + LAYER_LAG_MS));
       setPhase("idle"); // snaps back below the fold, off-screen, with no animation
@@ -187,6 +209,28 @@ export default function PageTransition() {
           />
         )),
       )}
+
+      <motion.div
+        className="absolute inset-0 flex items-center justify-center"
+        initial={{ opacity: 0, y: 16, scale: 0.96 }}
+        animate={cover ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: -16, scale: 0.98 }}
+        transition={{
+          duration: (cover ? MARK_IN_MS : MARK_OUT_MS) / 1000,
+          ease: EASE_MARK,
+          // 40% in, so it is fully settled a beat before the last column lands rather than
+          // still arriving as the page swaps underneath it.
+          delay: cover ? ((COVER_MS + TAIL_MS) * 0.4) / 1000 : 0,
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/logo/climbx-logo-white.png"
+          alt=""
+          width={186}
+          height={52}
+          className="h-9 w-auto md:h-11"
+        />
+      </motion.div>
     </div>
   );
 }

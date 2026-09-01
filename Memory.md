@@ -232,6 +232,16 @@ Read `cuberto.com/assets/js/bundle.js` + their inlined CSS directly rather than 
     (the nav pill slides *while* the curtain climbs, it never needed a head start) and no hold
     (reveal fires the instant the route renders) — **1.39s**, and the only fully dark moment is
     however long `router.push` actually takes.
+    Then two more rounds. (a) The dead air was never the travel — `router.push` did not *start*
+    until the cover finished, so the whole navigation (RSC fetch, render, commit, the new page's
+    mount work) stacked after the animation instead of running under it, and `prefetch` fired on
+    click so the payload loaded inside the covered window. Now prefetch is on **hover** and the
+    push fires the moment the page is *hidden* (leading layer's last column) rather than when
+    the trailing layer finishes settling. (b) The covered state carries the **white ClimbX
+    mark**, entering at 40% of the cover so it is settled before the swap and leaving on the
+    house ease. That needs a `MIN_COVERED_MS` floor (280ms) — with the route prefetched the push
+    resolves in a frame, which would land and dismiss the logo in the same breath. It is a floor
+    only; a slow route waits as long as it needs. Total ~1.88s.
   - Preloader: a second pair of clipped halves rendered *first* (so it sits behind) and given
     the same 160ms exit delay. Both seams land on identical geometry, so the back fill only
     ever shows as the light pair's own colour. `GONE_MS` extended by the lag.
