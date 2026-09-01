@@ -220,12 +220,11 @@ Read `cuberto.com/assets/js/bundle.js` + their inlined CSS directly rather than 
     second reads as a slope, not a staircase. `STEP_LAG_MS` is now the knob for the whole
     effect; at 0 the curtain is one flat sheet. Columns overlap by 1px, or fractional viewport
     widths leave hairline seams of page showing through.
-    Both layers show in both directions. The lighter panel is in front, so which one you watch
-    is decided purely by which is *late*, and that swaps per phase: on the cover the dark goes
-    first and the light follows onto it (page → dark → light); on the reveal the light goes
-    first, uncovering the dark still standing, which then goes too (light → dark → page). The
-    transition folds in on itself — the last thing seen before the swap is the first to leave
-    after it. The cover wait has to include `LAYER_LAG_MS` now that the cover staggers too.
+    The lighter panel is in front, so which layer you actually see is decided purely by which is
+    *late*. Cover: both ride together, dark stays hidden behind light, outro is a single grey
+    sheet. Reveal: light leads, uncovering the dark still standing, which then goes too (light →
+    dark → page). The dark still has to make the trip on the cover even though nobody sees it —
+    it is what the light peels back to on the way out. The cover wait has to include `LAYER_LAG_MS` now that the cover staggers too.
     **Budget discipline matters here**: every duration is paid twice, once per stair and once
     per layer, so they compound. The first cut (460/85/150 + a 220ms nav lead + a 120ms hold)
     came to **2.5s**, most of it a covered screen with nothing moving. Now 340/45/90, no lead

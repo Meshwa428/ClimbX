@@ -20,13 +20,14 @@ import { usePathname, useRouter } from "next/navigation";
 // the page — and clipping an ancestor clips the page with it. Two independent layers are
 // impossible there. Here they are two siblings, which is all this ever needed to be.
 //
-// Two layers, and both are visible in both directions. The lighter one is in front, so which
-// one you see is decided purely by which one is *late*:
-//   • cover  — dark goes first and the light follows onto it. Page → dark → light.
-//   • reveal — light goes first, uncovering the dark still standing, which then goes too.
-//             Light → dark → page.
-// Same order read forwards and backwards, so the transition folds in on itself: the last thing
-// you see before the swap is the first thing to leave after it.
+// Two layers, the lighter one in front — so which of them you actually see is decided purely by
+// which one is *late*. That is the only difference between the two halves:
+//   • cover  — both ride together, so the dark stays hidden behind the light the whole way and
+//              the outro is a single grey sheet.
+//   • reveal — the light goes first, uncovering the dark still standing, which then goes too.
+//              Light → dark → page.
+// The dark layer still has to make the trip on the cover even though nobody sees it: it is what
+// the light peels back to reveal on the way out.
 // The curtain's own speed. Trimmed, but not to the bone: putting a mark on the covered state
 // means the covered state has to last long enough to read it, so the travel has to give that
 // time back. Every value here is paid twice — once per stair, once per layer — so `STEP_LAG_MS`
@@ -194,8 +195,10 @@ export default function PageTransition() {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 z-[95] overflow-hidden">
       {[
-        { tint: "bg-ink", extra: cover ? 0 : lag, mark: false }, // back — dark: leads in, follows out
-        { tint: "bg-graphite", extra: cover ? lag : 0, mark: true }, // front — light: follows in, leads out
+        // back — dark: rides hidden under the light on the way in, trails it on the way out
+        { tint: "bg-ink", extra: cover ? 0 : lag, mark: false },
+        // front — light: the only layer the outro shows, and the first to leave
+        { tint: "bg-graphite", extra: 0, mark: true },
       ].map(({ tint, extra, mark }) =>
         Array.from({ length: N }, (_, i) => (
           <motion.div
