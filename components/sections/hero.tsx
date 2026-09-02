@@ -25,8 +25,6 @@ const shots: ShuffleItem[] = [
 export default function Hero() {
   return (
     <section className="relative flex min-h-svh w-full flex-col overflow-hidden bg-cloud text-ink">
-      <div className="absolute inset-0 bg-graph-dark" />
-
       {/* headline */}
       {/* `items-center` centres the column in the whole section, but the fixed nav eats the
           top ~90px of that box, so true centre reads as sitting high with a hole under the
@@ -88,7 +86,10 @@ export default function Hero() {
           bleeding off the right edge. It only goes side-by-side at xl: below that the
           cluster's left satellite lands on top of the paragraph. One instance either
           way — the whole cluster is scaled by a CSS var, so no second rAF loop. */}
-      <div className="pointer-events-none relative z-0 h-[30svh] w-full shrink-0 [--deck-scale:0.42] md:ml-auto md:h-[32svh] md:w-[62%] md:[--deck-scale:0.55] xl:absolute xl:right-0 xl:ml-0 xl:w-[38vw] xl:top-1/2 xl:h-[86svh] xl:-translate-y-1/2 xl:[--deck-scale:1] 2xl:[--deck-scale:1.2]">
+      {/* `right-[6vw]` rather than pinned to the edge: the cluster orbits, so its widest
+          satellite swings past the container's own bounds and was getting clipped by the
+          viewport. The inset is the orbit's overhang, not padding. */}
+      <div className="pointer-events-none relative z-0 h-[30svh] w-full shrink-0 [--deck-scale:0.42] md:ml-auto md:h-[32svh] md:w-[62%] md:[--deck-scale:0.55] xl:absolute xl:right-[6vw] xl:ml-0 xl:w-[38vw] xl:top-1/2 xl:h-[86svh] xl:-translate-y-1/2 xl:[--deck-scale:1] 2xl:[--deck-scale:1.2]">
         <div className="absolute inset-0" style={{ transform: "scale(var(--deck-scale))" }}>
           <ShuffleDeck items={shots} className="h-full w-full" />
         </div>

@@ -41,7 +41,9 @@ import { usePathname, useRouter } from "next/navigation";
 // something the page does rather than a sheet dropped on top of it.
 //
 // The mark rides the ink layer, because a white lockup needs the dark behind it.
-const TINT_STEP = "color-mix(in oklab, var(--color-ink) 32%, var(--pure-white))";
+// Defined once in globals.css, because the intro loader's curtain uses the same step — two
+// copies of a ramp is how the two curtains end up not matching.
+const TINT_STEP = "var(--curtain-step)";
 // Cast off the grey layer's leading edge. Negative Y because the curtain only ever travels
 // upward, so the shadow has to fall ahead of it, onto the page it is about to take. Only the
 // grey gets one: the ink rides in front of it, so an ink shadow would land on a surface

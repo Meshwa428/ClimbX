@@ -69,7 +69,9 @@ export default function CursorVideo({ src, size = 320 }: CursorVideoProps) {
     if (!row) return;
 
     // Skip entirely on touch devices
-    if (window.matchMedia("(pointer: coarse)").matches) return;
+    // Same strict desktop test as components/effects/cursor.tsx — see the note there on why
+    // "is there a real mouse" beats "is this touch".
+    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
 
     const half = size / 2;
 

@@ -27,9 +27,10 @@ export default function Cta() {
                   behind the section's own `bg-ink`. The leaves appeared and then vanished. They
                   are before the mascot in the DOM and the mascot is `relative`, so the order is
                   already right without asking z-index for anything. */}
-              <div className="absolute -inset-y-3 -left-[75%] -right-[75%]">
-                <Foliage />
-              </div>
+              {/* Foliage carries its own fixed 420×260 box centred on the mascot (lib/foliage.js
+                  places the leaves inside it in px), so all this has to do is scale the whole
+                  cluster down on small screens. */}
+              <Foliage className="scale-[0.62] md:scale-100" />
               <Mascot className="relative h-full w-full" />
             </div>
           </Reveal>

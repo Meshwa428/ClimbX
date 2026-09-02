@@ -62,9 +62,16 @@ export default function Cursor() {
   const modeRef = useRef<Mode>("dot");
 
   useEffect(() => {
-    // Skip only when the primary pointer is genuinely coarse (touch). Gating on
-    // `(pointer: fine)` instead would also drop environments that report neither.
-    if (window.matchMedia("(pointer: coarse)").matches) return;
+    // Desktop only, and the test is deliberately the strict one. `(pointer: coarse)` as an
+    // *exclusion* leaves the cursor running anywhere that reports neither coarse nor fine, and
+    // a fair number of mobile browsers land there — an Android phone that reports `fine`, or a
+    // tablet, would get a follower with nothing to follow. `(hover: hover) and (pointer: fine)`
+    // asks the question the other way round: is there a real mouse here? A touchscreen laptop
+    // answers yes, correctly, and keeps it.
+    //
+    // Nothing is lost when the answer is "don't know" — the native cursor is never hidden, so
+    // the fallback is simply the ordinary pointer.
+    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
     setEnabled(true);
 
     let tx = -200;

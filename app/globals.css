@@ -42,6 +42,14 @@
   background: var(--pure-white);
   /* Two different radius sets on each axis is what stops it reading as an egg. */
   border-radius: 58% 42% 47% 53% / 54% 46% 56% 44%;
+  /* Glow. Two shadows rather than one: a tight bright halo that hugs the silhouette and a wide
+     faint one that falls off into the block, which is what stops it reading as a ring. Both
+     follow `border-radius`, so the glow is the blob's own shape and not a circle behind it —
+     and being a shadow it is painted into the same layer, so the bob carries it for free
+     instead of a second element having to be animated alongside. */
+  box-shadow:
+    0 0 24px color-mix(in oklab, var(--pure-white) 16%, transparent),
+    0 0 70px color-mix(in oklab, var(--pure-white) 8%, transparent);
 }
 .mascot-eyes {
   position: absolute;
@@ -100,37 +108,30 @@
    land on the box's diagonal. The first pass used a *square*, which makes a symmetrical blob
    with no long axis — a petal at best. Elongating it is what turns it into a leaf. */
 .leaf {
+  --flip: 1; /* -1 mirrors the shape for the right-hand cluster */
   display: block;
   width: 100%;
-  aspect-ratio: 0.56;
+  height: 100%;
   border-radius: 0 100% 0 100%;
-  /* Fill, plus the midrib: a hairline drawn along `to bottom right`, which is the same diagonal
-     the two points sit on — so it lines the vein up with the shape without a single degree of
-     rotation maths. Painted once into the layer; the sway below never touches it. */
-  background:
-    linear-gradient(
-      to bottom right,
-      transparent 49.3%,
-      color-mix(in oklab, var(--pure-white) 15%, var(--color-ink)) 49.3%,
-      color-mix(in oklab, var(--pure-white) 15%, var(--color-ink)) 50.7%,
-      transparent 50.7%
-    ),
-    color-mix(in oklab, var(--pure-white) 7%, var(--color-ink));
-  transform-origin: 0% 100%; /* the stem — the corner the leaf would grow from */
-  transform: rotate(var(--rot));
+  background: color-mix(in oklab, var(--pure-white) 7%, var(--color-ink));
+  /* Rotates about its own centre, not its stem. A stem pivot is prettier in principle but it
+     *moves* the leaf as it turns, which makes the overlap guarantee in scripts/check-foliage.mjs
+     impossible to state: the centre has to stay put for a radius test to mean anything. */
+  transform-origin: 50% 50%;
+  transform: rotate(var(--rot)) scale(var(--flip), 1);
   animation: leaf-sway 9s ease-in-out infinite;
 }
 
-/* Rotate *and* a little scale, so the leaf breathes as it turns instead of ticking round a
-   pivot like a hand on a dial. Each leaf gets its own duration inline, which is what stops six
-   of them reading as one mechanism. */
+/* Rotate *and* a little scale, so the leaf breathes as it turns instead of ticking round like a
+   hand on a dial. Each leaf carries its own duration inline — six identical ones is what made
+   them read as a single mechanism rather than six separate leaves. */
 @keyframes leaf-sway {
   0%,
   100% {
-    transform: rotate(var(--rot)) scale(1);
+    transform: rotate(var(--rot)) scale(var(--flip), 1);
   }
   50% {
-    transform: rotate(calc(var(--rot) + 7deg)) scale(1.04);
+    transform: rotate(calc(var(--rot) + 7deg)) scale(calc(var(--flip) * 1.04), 1.04);
   }
 }
 
@@ -178,6 +179,14 @@
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* The curtains' middle step — the value that arrives before the ink on the way in and is left
+     standing after it on the way out. Both curtains use it: the page transition
+     (components/layout/page-transition.tsx) and the intro loader
+     (components/layout/preloader.tsx), so the site only ever has one two-tone ramp rather than
+     two that drift apart. It is deliberately a *mid* grey: `graphite` (#2c2c2c) against `ink`
+     (#1a1a1a) is two near-blacks pretending to be a ramp, and reads as one flat sheet. */
+  --curtain-step: color-mix(in oklab, var(--brand-black) 32%, var(--pure-white));
 }
 
 @theme inline {

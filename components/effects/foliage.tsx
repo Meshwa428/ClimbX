@@ -1,39 +1,33 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { BOX, LEAVES, leafHeight } from "@/lib/foliage";
 
-// Foliage — a cluster of leaves the mascot sits in, that scatter away from the pointer and
-// drift back.
+// Foliage — leaves flanking the mascot that scatter away from the pointer and drift back.
 //
-// Still no artwork: a leaf is a box with two opposite corners squared and two fully rounded,
-// which gives a lens whose points sit on the box's diagonal. Three things make that read as a
-// leaf rather than the blob it was:
-//   • it is *elongated* (a near-square lens is a petal, or nothing)
-//   • it has a midrib, drawn as a hairline gradient along the same diagonal the points are on,
-//     so no rotation maths is needed to line it up with the shape
-//   • it is small enough to be foliage rather than scenery
+// No artwork: a leaf is a box with two opposite corners squared and two fully rounded, which
+// gives a lens whose points sit on the box's diagonal. Elongated (aspect 0.56) it reads as a
+// leaf; near-square it reads as a petal, which is what the first pass shipped.
+//
+// **Placement lives in `lib/foliage.js`: scattered from a seed, not placed by hand.** Six
+// hand-authored positions came out as a mirrored pair of clusters that read as a laurel wreath —
+// the eye finds that symmetry immediately. Positions are now rejection-sampled from a seeded
+// PRNG, so the arrangement is irregular while the constraints hold by construction, and
+// `node scripts/check-foliage.mjs` asserts them: no two leaves overlap, none sits under the
+// mascot, and the scatter actually placed them all. Overlap is tested as circles of
+// half-the-diagonal, because the leaves rotate and a 60° turn makes a 46×82 leaf 94px wide.
+// Positions are *centres* with negative margins, so changing a leaf's size no longer moves it.
 //
 // Motion is split across two elements on purpose, the same way the mascot splits gaze from
 // blink: the anchor takes the pointer repel (JS, transform) and the leaf inside takes the idle
-// sway (CSS, transform). One element cannot hold two independent transforms, and this way the
-// idle never stops to let the repel happen — they compose.
+// sway (CSS, transform). One element cannot hold two independent transforms, and split this way
+// the idle never stops to let the repel happen — they compose.
 //
 // The repel loop follows the same rules as everything else here: one rAF for all six leaves, it
-// parks the moment they have all settled, geometry is cached rather than measured per move, and
-// an IntersectionObserver stops it off-screen. Touch and reduced motion never start it.
-
-// [left%, top%, width% of the box, base rotation, sway seconds, sway delay]
-const LEAVES: [number, number, number, number, number, number][] = [
-  [4, 40, 15, -34, 9, 0],
-  [17, 12, 12, -12, 11, 1.3],
-  [28, 66, 10, -56, 8, 2.6],
-  [66, 60, 11, 128, 10.5, 0.7],
-  [78, 16, 14, 160, 9.5, 1.9],
-  [90, 46, 9, 112, 12, 3.2],
-];
-
-const PUSH = 34; // px a leaf is shoved at the very centre of the pointer
-const RADIUS = 190; // px of influence — outside this a leaf is left alone
+// parks the moment they have all settled, geometry is cached rather than measured per pointer
+// move, and an IntersectionObserver stops it off-screen. Touch and reduced motion never start it.
+const PUSH = 48; // px a leaf is shoved at the very centre of the pointer
+const RADIUS = 240; // px of influence — outside this a leaf is left alone
 const SPRING = 0.1; // per-frame approach, used both ways: shove out and drift back
 const SETTLED = 0.15; // px; below this the loop parks
 
@@ -53,7 +47,6 @@ export default function Foliage({ className = "" }: { className?: string }) {
     let raf = 0;
     let onScreen = false;
     let stale = true;
-    // Where each leaf sits, and how far it is currently displaced.
     let centres: { x: number; y: number }[] = [];
     const off = anchors.map(() => ({ x: 0, y: 0 }));
 
@@ -130,24 +123,35 @@ export default function Foliage({ className = "" }: { className?: string }) {
   }, []);
 
   return (
-    <div ref={root} aria-hidden className={`pointer-events-none absolute inset-0 ${className}`}>
-      {LEAVES.map(([left, top, width, rot, secs, delay], i) => (
-        <span
-          key={i}
-          data-leaf
-          className="leaf-anchor"
-          style={{ left: `${left}%`, top: `${top}%`, width: `${width}%` }}
-        >
+    <div
+      ref={root}
+      aria-hidden
+      className={`pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 ${className}`}
+      style={{ width: BOX.w, height: BOX.h }}
+    >
+      {LEAVES.map(([cx, cy, w, rot, flip, secs, delay], i) => {
+        const h = leafHeight(w);
+        return (
           <span
-            className="leaf"
-            style={{
-              ["--rot" as string]: `${rot}deg`,
-              animationDuration: `${secs}s`,
-              animationDelay: `${delay}s`,
-            }}
-          />
-        </span>
-      ))}
+            key={i}
+            data-leaf
+            className="leaf-anchor"
+            // Centre, not corner: the negative margins put the leaf's middle on (cx, cy), so a
+            // size change no longer drags it somewhere else.
+            style={{ left: cx, top: cy, width: w, height: h, marginLeft: -w / 2, marginTop: -h / 2 }}
+          >
+            <span
+              className="leaf"
+              style={{
+                ["--rot" as string]: `${rot}deg`,
+                ["--flip" as string]: flip,
+                animationDuration: `${secs}s`,
+                animationDelay: `${delay}s`,
+              }}
+            />
+          </span>
+        );
+      })}
     </div>
   );
 }
