@@ -348,7 +348,39 @@ Read `cuberto.com/assets/js/bundle.js` + their inlined CSS directly rather than 
   hero both clip), `pointer: coarse` already switches the services stack to a tap accordion and
   disables the custom cursor, work grid collapses to one column, hero uses `svh`.
 
+## Monkey mascot (branch `feat/monkey-mascot`) — blocked on artwork
+Requested: monkey descends on a black vine at the right on load, then traverses right→left
+vine-to-vine (or shrinks) on scroll, with black vine/leaf foliage along the top edge.
+- **Rive**, not Lottie: the behaviour is reactive, not a loop — position is a function of scroll
+  and it changes *state*. Lottie can be scrubbed but has no state, so every transition would be
+  a JS cross-fade. Rive's state machine blends natively; that is what earns the dependency.
+- `@rive-app/react-canvas` (~150KB) is **not installed yet** and must not be until a `.riv`
+  exists — an unused runtime is dead weight.
+- A `.riv` is a binary authored in the Rive editor. It cannot be produced from here, and
+  `CLAUDE.md` forbids inventing brand assets, so **no mascot code is written** — writing the
+  harness first would be scaffolding for a file that may never arrive.
+- The contract (artboard `monkey`, state machine `mascot`, inputs `scroll` / `traversing` /
+  `compact` / `side` / `hover`, palette, reduced-motion and off-screen rules) is in
+  `docs/mascot-spec.md`. Hand that to whoever authors the file.
+- Foliage is *not* in the Rive file — static SVG in `public/mascot/`, sourced from CC0 SVGRepo
+  silhouettes (`RULES.md §10`). Build it **after** the `.riv`, so the vine anchor is matched once
+  rather than guessed twice.
+
+## Blob mascot (shipped, CTA) — overlaps the above, needs a decision
+`components/effects/mascot.tsx` + `.mascot*` rules in `globals.css`. Built on the
+jeremy-prt/bloub *idea* only: a lopsided-`border-radius` div with two eyes that track the
+pointer. No SVG, no canvas, no dependency; bob and blink are CSS keyframes on `transform` so
+they stay composited, and the gaze is one rAF that parks on catch-up, writes two custom
+properties to a single element, caches its rect instead of measuring on every pointer move, and
+stops off-screen via IntersectionObserver. Touch and reduced motion never start it.
+**This and the Rive monkey are two answers to the same request.** The blob ships today and owes
+nothing to an artwork pipeline; the monkey is richer and scroll-reactive but blocked. Decide
+whether the blob is the real thing, a stand-in until the `.riv` lands, or gets removed.
+
 ## Open TODOs / questions for client
+- [ ] **Monkey mascot `.riv`** — blocks the whole Rive mascot feature. Spec: `docs/mascot-spec.md`
+- [ ] Mascot direction: keep the shipped CSS blob, or replace it with the Rive monkey once the
+      `.riv` arrives? (Two implementations of one idea — see the two sections above.)
 - [ ] Source the real `click-soft.mp3` tick asset (placeholder in use).
 - [ ] Helvetica Now web license? (else ship Inter as body)
 - [ ] Real content: project numbers, team, testimonials, socials.
