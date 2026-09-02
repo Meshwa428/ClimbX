@@ -21,6 +21,26 @@
   }
 }
 
+/* SplitText descenders.
+   GSAP's `mask` option wraps every word in its own box with `overflow: clip`, named after the
+   element it wraps (`.split-word` → `.split-word-mask`). That box is exactly one line tall, and
+   our display headings run `leading-[0.95]` — a line box *shorter* than the type in it — so the
+   tails of y, g, p, j and q fall outside it and get cut. Padding the box down clears them;
+   the matching negative margin means nothing below moves. In em, so it tracks the font size.
+
+   Padding the root of the component (which is also `overflow: hidden`) is not enough on its
+   own — that was the first attempt and the visible clip is one level further in.
+
+   The masks have to stay tight enough to hide a word before it slides up into place, so
+   `SplitReveal` starts its words at `yPercent: 135` rather than 115: the extra padding here is
+   room the word would otherwise be visible in at rest. */
+.split-word-mask,
+.split-char-mask,
+.split-line-mask {
+  padding-bottom: 0.22em;
+  margin-bottom: -0.22em;
+}
+
 /* Brand tokens — Design.md §1 (source of truth: assets/Brand fonts and colour.pdf) */
 :root {
   --brand-orange: #f5a623;

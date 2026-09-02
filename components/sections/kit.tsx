@@ -63,7 +63,10 @@ export function SplitReveal({
       className={className}
       splitType="words"
       mask="words"
-      from={{ yPercent: 115 }}
+      // 135, not 115: the word masks carry bottom padding so descenders aren't clipped
+      // (globals.css), and a word starting only 115% down would sit inside that padding —
+      // visible as a sliver above the mask before it animates.
+      from={{ yPercent: 135 }}
       to={{ yPercent: 0 }}
       duration={1.1}
       delay={70}
