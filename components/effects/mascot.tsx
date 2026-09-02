@@ -27,8 +27,11 @@ import { useEffect, useRef } from "react";
 // TODO(content): this is a placeholder built from brand tokens, not a brand asset. A real
 // mascot should be designed and signed off (CLAUDE.md — never invent brand assets); the
 // component takes whatever shape and colours that lands on.
-const MAX_GAZE = 7; // px an eye travels from centre at full deflection
-const GAZE_REACH = 260; // px of pointer distance that counts as "fully looking at you"
+const MAX_GAZE = 14; // px an eye travels from centre at full deflection
+// Shorter than it was, so full deflection arrives while the pointer is still near the mascot
+// rather than only once it is most of a screen away. Doubling the travel alone would still have
+// read as subtle, because most of the time the pointer never got far enough to earn it.
+const GAZE_REACH = 190; // px of pointer distance that counts as "fully looking at you"
 const LERP = 0.14; // per-frame catch-up — the eyes trail the pointer rather than snapping
 const SETTLED = 0.05; // px; below this the loop parks instead of burning frames on nothing
 

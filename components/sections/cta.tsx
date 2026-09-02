@@ -17,12 +17,17 @@ export default function Cta() {
       <div className="px-6 py-28 text-center md:px-16 md:py-48">
         <div className={`${CONTAINER} flex flex-col items-center`}>
           <Reveal>
-            {/* The foliage box is wider than the mascot so the leaves read as something it is
-                sitting *in*, and it is behind on the z-order so nothing ever crosses the face. */}
             <div className="relative mb-10 h-20 w-24 md:mb-14 md:h-28 md:w-32">
-              {/* Its own box, wider than the mascot on both sides and behind it, so the leaves
-                  read as something it is sitting in and nothing ever crosses the face. */}
-              <div className="absolute -inset-y-3 -left-[75%] -right-[75%] -z-10">
+              {/* Its own box, wider than the mascot on both sides, so the leaves read as
+                  something it is sitting in.
+                  No negative z-index here, and that is deliberate: `Reveal` is a motion div, so
+                  it carries a transform *while animating* — which opens a stacking context that
+                  contains a `-z-10` child. The moment the reveal finishes Motion drops the
+                  transform, the stacking context goes with it, and the child escapes to sit
+                  behind the section's own `bg-ink`. The leaves appeared and then vanished. They
+                  are before the mascot in the DOM and the mascot is `relative`, so the order is
+                  already right without asking z-index for anything. */}
+              <div className="absolute -inset-y-3 -left-[75%] -right-[75%]">
                 <Foliage />
               </div>
               <Mascot className="relative h-full w-full" />

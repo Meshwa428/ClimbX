@@ -88,26 +88,49 @@
   }
 }
 
-/* Foliage (components/effects/foliage.tsx). A leaf is a square with one pair of opposite
-   corners fully rounded — no artwork, no asset. It sways on `transform` alone, pivoting from
-   its stem rather than its centre, so the cluster paints once and then only the GPU works. */
-.leaf {
+/* Foliage (components/effects/foliage.tsx).
+   Two nested elements, because one cannot hold two independent transforms: the anchor takes the
+   pointer repel (written from JS) and the leaf inside takes the idle sway (CSS). Composed, so
+   the sway never stops to let the repel happen. */
+.leaf-anchor {
   position: absolute;
   display: block;
-  background: color-mix(in oklab, var(--pure-white) 7%, var(--color-ink));
+}
+/* Squaring two opposite corners and fully rounding the other two gives a lens, and its points
+   land on the box's diagonal. The first pass used a *square*, which makes a symmetrical blob
+   with no long axis — a petal at best. Elongating it is what turns it into a leaf. */
+.leaf {
+  display: block;
+  width: 100%;
+  aspect-ratio: 0.56;
   border-radius: 0 100% 0 100%;
+  /* Fill, plus the midrib: a hairline drawn along `to bottom right`, which is the same diagonal
+     the two points sit on — so it lines the vein up with the shape without a single degree of
+     rotation maths. Painted once into the layer; the sway below never touches it. */
+  background:
+    linear-gradient(
+      to bottom right,
+      transparent 49.3%,
+      color-mix(in oklab, var(--pure-white) 15%, var(--color-ink)) 49.3%,
+      color-mix(in oklab, var(--pure-white) 15%, var(--color-ink)) 50.7%,
+      transparent 50.7%
+    ),
+    color-mix(in oklab, var(--pure-white) 7%, var(--color-ink));
   transform-origin: 0% 100%; /* the stem — the corner the leaf would grow from */
   transform: rotate(var(--rot));
   animation: leaf-sway 9s ease-in-out infinite;
 }
 
+/* Rotate *and* a little scale, so the leaf breathes as it turns instead of ticking round a
+   pivot like a hand on a dial. Each leaf gets its own duration inline, which is what stops six
+   of them reading as one mechanism. */
 @keyframes leaf-sway {
   0%,
   100% {
-    transform: rotate(var(--rot));
+    transform: rotate(var(--rot)) scale(1);
   }
   50% {
-    transform: rotate(calc(var(--rot) + 6deg));
+    transform: rotate(calc(var(--rot) + 7deg)) scale(1.04);
   }
 }
 
