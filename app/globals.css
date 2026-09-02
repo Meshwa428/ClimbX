@@ -21,6 +21,80 @@
   }
 }
 
+/* Mascot (components/effects/mascot.tsx).
+   Everything continuous in here animates `transform` and nothing else, so it stays on the
+   compositor: a low-end phone pays for one small composited layer and no repaints at all. The
+   silhouette is lopsided `border-radius` percentages rather than an asset — organic, and
+   nothing to hand-author (RULES.md §10) or ship. */
+.mascot {
+  --gx: 0; /* written by the gaze loop, in px, read by the eyes below */
+  --gy: 0;
+}
+.mascot-body {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  animation: mascot-bob 5.5s ease-in-out infinite;
+}
+.mascot-skin {
+  position: absolute;
+  inset: 0;
+  background: var(--pure-white);
+  /* Two different radius sets on each axis is what stops it reading as an egg. */
+  border-radius: 58% 42% 47% 53% / 54% 46% 56% 44%;
+}
+.mascot-eyes {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18%;
+  /* The gaze. One translate for both eyes — the loop writes two custom properties on the root
+     and this is the only element that reads them. */
+  transform: translate3d(calc(var(--gx) * 1px), calc(var(--gy) * 1px), 0);
+}
+.mascot-eyes > span {
+  display: block;
+  width: 9%;
+  height: 22%;
+  background: var(--color-ink);
+  border-radius: 999px;
+  animation: mascot-blink 7s infinite;
+}
+/* The second eye is a hair behind, which reads as alive where a synchronised pair reads as a
+   machine. Small enough that it is never a wink. */
+.mascot-eyes > span:last-child {
+  animation-delay: 40ms;
+}
+
+@keyframes mascot-bob {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(0, -7%, 0) rotate(-3deg);
+  }
+}
+@keyframes mascot-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot-body,
+  .mascot-eyes > span {
+    animation: none;
+  }
+}
+
 /* SplitText descenders.
    GSAP's `mask` option wraps every word in its own box with `overflow: clip`, named after the
    element it wraps (`.split-word` → `.split-word-mask`). That box is exactly one line tall, and

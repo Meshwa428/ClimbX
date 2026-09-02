@@ -348,24 +348,6 @@ Read `cuberto.com/assets/js/bundle.js` + their inlined CSS directly rather than 
   hero both clip), `pointer: coarse` already switches the services stack to a tap accordion and
   disables the custom cursor, work grid collapses to one column, hero uses `svh`.
 
-## Monkey mascot (branch `feat/monkey-mascot`) — blocked on artwork
-Requested: monkey descends on a black vine at the right on load, then traverses right→left
-vine-to-vine (or shrinks) on scroll, with black vine/leaf foliage along the top edge.
-- **Rive**, not Lottie: the behaviour is reactive, not a loop — position is a function of scroll
-  and it changes *state*. Lottie can be scrubbed but has no state, so every transition would be
-  a JS cross-fade. Rive's state machine blends natively; that is what earns the dependency.
-- `@rive-app/react-canvas` (~150KB) is **not installed yet** and must not be until a `.riv`
-  exists — an unused runtime is dead weight.
-- A `.riv` is a binary authored in the Rive editor. It cannot be produced from here, and
-  `CLAUDE.md` forbids inventing brand assets, so **no mascot code is written** — writing the
-  harness first would be scaffolding for a file that may never arrive.
-- The contract (artboard `monkey`, state machine `mascot`, inputs `scroll` / `traversing` /
-  `compact` / `side` / `hover`, palette, reduced-motion and off-screen rules) is in
-  `docs/mascot-spec.md`. Hand that to whoever authors the file.
-- Foliage is *not* in the Rive file — static SVG in `public/mascot/`, sourced from CC0 SVGRepo
-  silhouettes (`RULES.md §10`). Build it **after** the `.riv`, so the vine anchor is matched once
-  rather than guessed twice.
-
 ## Open TODOs / questions for client
 - [ ] Source the real `click-soft.mp3` tick asset (placeholder in use).
 - [ ] Helvetica Now web license? (else ship Inter as body)
@@ -380,7 +362,6 @@ vine-to-vine (or shrinks) on scroll, with black vine/leaf foliage along the top 
 - [ ] Founder photo(s) for Story/Team (have IG crops only)
 - [ ] Real social profile URLs (footer still `href="#"` — blocks `sameAs` schema)
 - [ ] Full street address matching the Google Business Profile (blocks `LocalBusiness` schema)
-- [ ] **Monkey mascot `.riv`** — blocks the whole mascot feature. Spec: `docs/mascot-spec.md`
 - [ ] Target keyword list — blocks the H1/title/description rewrite
 
 ## Notes

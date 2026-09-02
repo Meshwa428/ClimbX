@@ -2,13 +2,22 @@
 
 import { CONTAINER, DARK_BLOCK } from "@/components/sections/layout";
 import { PillLink, Reveal, SplitReveal } from "@/components/sections/kit";
+import Mascot from "@/components/effects/mascot";
 
-// Closing CTA — one dark block, one enormous line, one outline pill. Nothing else.
+// Closing CTA — one dark block, one enormous line, one outline pill, and the mascot.
+//
+// It lives here rather than in the hero because the hero already has the shuffle deck and a
+// second thing orbiting would just be noise (RULES.md §9). This is the last screen before the
+// footer, it is otherwise a lot of empty ink, and it is the one moment on the page where a bit
+// of warmth is doing a job rather than decorating.
 export default function Cta() {
   return (
     <section className={DARK_BLOCK}>
       <div className="px-6 py-28 text-center md:px-16 md:py-48">
         <div className={`${CONTAINER} flex flex-col items-center`}>
+          <Reveal>
+            <Mascot className="mb-10 h-20 w-24 md:mb-14 md:h-28 md:w-32" />
+          </Reveal>
           <SplitReveal
             as="h2"
             align="center"
