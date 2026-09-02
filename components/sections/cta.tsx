@@ -3,6 +3,7 @@
 import { CONTAINER, DARK_BLOCK } from "@/components/sections/layout";
 import { PillLink, Reveal, SplitReveal } from "@/components/sections/kit";
 import Mascot from "@/components/effects/mascot";
+import Foliage from "@/components/effects/foliage";
 
 // Closing CTA — one dark block, one enormous line, one outline pill, and the mascot.
 //
@@ -16,7 +17,16 @@ export default function Cta() {
       <div className="px-6 py-28 text-center md:px-16 md:py-48">
         <div className={`${CONTAINER} flex flex-col items-center`}>
           <Reveal>
-            <Mascot className="mb-10 h-20 w-24 md:mb-14 md:h-28 md:w-32" />
+            {/* The foliage box is wider than the mascot so the leaves read as something it is
+                sitting *in*, and it is behind on the z-order so nothing ever crosses the face. */}
+            <div className="relative mb-10 h-20 w-24 md:mb-14 md:h-28 md:w-32">
+              {/* Its own box, wider than the mascot on both sides and behind it, so the leaves
+                  read as something it is sitting in and nothing ever crosses the face. */}
+              <div className="absolute -inset-y-3 -left-[75%] -right-[75%] -z-10">
+                <Foliage />
+              </div>
+              <Mascot className="relative h-full w-full" />
+            </div>
           </Reveal>
           <SplitReveal
             as="h2"

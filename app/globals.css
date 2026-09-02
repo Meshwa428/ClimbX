@@ -88,9 +88,33 @@
   }
 }
 
+/* Foliage (components/effects/foliage.tsx). A leaf is a square with one pair of opposite
+   corners fully rounded — no artwork, no asset. It sways on `transform` alone, pivoting from
+   its stem rather than its centre, so the cluster paints once and then only the GPU works. */
+.leaf {
+  position: absolute;
+  display: block;
+  background: color-mix(in oklab, var(--pure-white) 7%, var(--color-ink));
+  border-radius: 0 100% 0 100%;
+  transform-origin: 0% 100%; /* the stem — the corner the leaf would grow from */
+  transform: rotate(var(--rot));
+  animation: leaf-sway 9s ease-in-out infinite;
+}
+
+@keyframes leaf-sway {
+  0%,
+  100% {
+    transform: rotate(var(--rot));
+  }
+  50% {
+    transform: rotate(calc(var(--rot) + 6deg));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .mascot-body,
-  .mascot-eyes > span {
+  .mascot-eyes > span,
+  .leaf {
     animation: none;
   }
 }
