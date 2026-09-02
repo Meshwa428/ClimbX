@@ -187,6 +187,42 @@
      two that drift apart. It is deliberately a *mid* grey: `graphite` (#2c2c2c) against `ink`
      (#1a1a1a) is two near-blacks pretending to be a ramp, and reads as one flat sheet. */
   --curtain-step: color-mix(in oklab, var(--brand-black) 32%, var(--pure-white));
+
+  /* The cast off that step's leading edge, as three separate parts rather than one shorthand —
+     because the two curtains cannot use the same *property*. The page transition's columns are
+     rectangles and take a `box-shadow`; the loader's halves are `clip-path` staircases, and
+     `clip-path` is applied after `filter`, so a shadow set on those is generated from the full
+     rectangle and then clipped away to nothing. It has to be a `drop-shadow` on an ancestor
+     there, which traces the alpha the clip produced. Different property, identical numbers —
+     which is the whole reason they live here instead of being written out twice. */
+  --curtain-shadow-y: -14px;
+  --curtain-shadow-blur: 34px;
+  --curtain-shadow-color: color-mix(in oklab, var(--brand-black) 38%, transparent);
+}
+
+/* And these three have to be **registered**, which is not decoration — it is the whole reason
+   the loader had no shadow while the page transition did.
+   An unregistered custom property is a string. `var()` pastes its text in verbatim, so the
+   loader's rule became `drop-shadow(0 -14px 34px color-mix(in oklab, …))`. `box-shadow` accepts
+   a `color-mix()` there and rendered fine; `drop-shadow()` does not, and when one filter
+   function fails to parse the browser throws out the *entire* `filter` declaration — silently,
+   with no warning and no partial effect. One curtain had a shadow, the other had nothing.
+   Registered with a syntax, each one computes to a real value first, so `var()` substitutes
+   `rgb(26 26 26 / 0.38)` and `-14px` rather than the source text that produced them. */
+@property --curtain-shadow-color {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+@property --curtain-shadow-y {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+@property --curtain-shadow-blur {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
 }
 
 @theme inline {

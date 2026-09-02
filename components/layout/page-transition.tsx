@@ -48,7 +48,8 @@ const TINT_STEP = "var(--curtain-step)";
 // upward, so the shadow has to fall ahead of it, onto the page it is about to take. Only the
 // grey gets one: the ink rides in front of it, so an ink shadow would land on a surface
 // already covered and paint nothing.
-const STEP_SHADOW = "0 -14px 34px color-mix(in oklab, var(--color-ink) 38%, transparent)";
+const STEP_SHADOW =
+  "0 var(--curtain-shadow-y) var(--curtain-shadow-blur) var(--curtain-shadow-color)";
 
 const N = 6; // stairs across the width
 const COVER_MS = 400;

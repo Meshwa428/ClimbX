@@ -26,13 +26,19 @@ const LAYER_LAG_MS = 160;
 // climbing — but the two curtains now share one ramp instead of the loader running its own
 // near-black `graphite` against `ink`, which read as a single flat sheet.
 const STEP = "var(--curtain-step)";
-// The same cast the page transition's grey layer has. Expressed as a `drop-shadow` filter
-// rather than a `box-shadow` because these panels are clipped — see the note at the wrapper.
-const STEP_SHADOW = "drop-shadow(0 -10px 26px color-mix(in oklab, var(--color-ink) 45%, transparent))";
-const GONE_MS = SPLIT_DELAY_MS + SPLIT_MS + LAYER_LAG_MS;
-
-const N = 6; // steps
+// The same cast the page transition's grey layer has — same property, same offset, same blur,
+// same colour, the numbers read from `globals.css` so the two curtains cannot drift apart.
+const STEP_SHADOW =
+  "0 var(--curtain-shadow-y) var(--curtain-shadow-blur) var(--curtain-shadow-color)";
+const N = 6; // steps, and columns — one per step
 const step = 100 / N;
+// The gap between one column and the next, matching the page transition's own stagger. This is
+// what turns the curtain from one shape into a set of plates.
+const STEP_LAG_MS = 60;
+const TAIL_MS = (N - 1) * STEP_LAG_MS;
+// The loader is not gone until the last, most-delayed column of the trailing layer has left.
+const GONE_MS = SPLIT_DELAY_MS + SPLIT_MS + TAIL_MS + LAYER_LAG_MS;
+
 const A = 2.3; // ribbon half-thickness on X (%) — risers
 const B = 4.6; // ribbon half-thickness on Y (%) — treads
 
@@ -44,18 +50,30 @@ for (let i = 0; i < N; i++) {
 }
 const asPct = (p: [number, number][]) => p.map(([x, y]) => `${x}% ${y}%`).join(", ");
 
-// The two halves are cut from the *same* centreline, so their edges meet exactly — and two
-// anti-aliased edges meeting exactly leave a sub-pixel gap that shows whatever is behind them.
-// That was invisible while both layers were near-black; the moment the trailing layer became a
-// mid grey, the gap started drawing a hairline staircase across the screen.
+// The curtain is **columns**, not a clipped staircase, and that is the whole difference between
+// this reading as separate plates and reading as one flat sheet.
 //
-// So the top-left half is cut a hair past the line, which makes the two overlap instead of abut.
-// It only has to hold while the panels are at rest — once they split they are travelling in
-// opposite directions and there is no seam left to leak through.
-const BLEED = 0.4; // % of the box
-const midStr = asPct(mid);
-const panelTopLeft = `polygon(0% 0%, ${asPct(mid.map(([x, y]) => [x, y + BLEED]))})`;
-const panelBottomRight = `polygon(${midStr}, 100% 100%)`;
+// It used to be two `clip-path` polygons cut from the shared centreline. That makes the
+// staircase a single connected shape: one silhouette, so there are no plate edges *inside* it to
+// separate, and a shadow can only ever outline the whole thing. The page transition's curtain is
+// six independent columns each sitting at its own offset, which is where its depth comes from —
+// every column casts onto the one behind it.
+//
+// So each column is cut in two at its own step height and the halves part vertically, which
+// keeps the reveal exactly as it was: a staircase opening from the middle outward. The stagger
+// then does what it does in the page transition — the columns arrive on different beats, so the
+// edge steps in time as well as in space.
+//
+// Two things fall out of this for free. `box-shadow` works again (these are rectangles, so
+// nothing is clipping the shadow away) which means the loader can use the *same property* as the
+// page transition rather than a `drop-shadow` on a wrapper. And the sub-pixel seam is gone with
+// the shared centreline that caused it — the halves overlap by SEAM instead.
+const SEAM = 0.6; // % — the two halves of a column overlap rather than abut
+// Where column i parts, as a % from the top. Descends left → right, the same staircase the
+// orange ribbon draws.
+const splitAt = (i: number) => 100 * (1 - (i + 0.5) / N);
+// Rightmost column leads, leftmost trails — same direction as the page transition's climb.
+const stepDelay = (i: number) => (N - 1 - i) * STEP_LAG_MS;
 
 // Orange band = centerline offset by ±(A,B), with the first tread extended straight off
 // the left edge and the last riser straight off the top → no tilted stairs at the ends.
@@ -103,51 +121,48 @@ export default function Preloader() {
         transition={{ duration: split ? 0 : 0.2 }}
       />
 
-      {/* Two pairs of halves on the same staircase clip. The lighter pair is rendered first so
-          it sits *behind* and leaves last: the dark stairs pull away to reveal lighter stairs
-          still standing, and those pull away to reveal the page. Both seams land on the same
-          geometry, so the back fill only ever shows through as the light pair's own colour. */}
+      {/* Two layers of columns. The lighter one is rendered first so it sits *behind* and leaves
+          last: the ink plates pull away to reveal grey plates still standing, and those pull
+          away to reveal the page. Only the grey gets the shadow — the ink rides in front of it,
+          so an ink shadow would fall on a surface already covered and paint nothing. */}
       {[
-        { tint: STEP, lag: LAYER_LAG_MS, shade: true }, // layer 2 — the mid-grey step, trails
-        { tint: "var(--color-ink)", lag: 0, shade: false }, // layer 1 — ink, leads
-      ].map(({ tint, lag, shade }) =>
-        (
-          [
-            [panelTopLeft, "-110%"],
-            [panelBottomRight, "110%"],
-          ] as const
-        ).map(([clip, exit]) => (
-          // The shadow has to live on a *wrapper*, not on the panel. `clip-path` is applied
-          // after `filter`, so a shadow set on the clipped element is generated from its full
-          // rectangle and then clipped away to nothing. On an ancestor, `drop-shadow` traces the
-          // alpha the clip already produced — which is the staircase, exactly the edge we want
-          // it on. `box-shadow` cannot do this job at all here for the same reason.
-          //
-          // Only the grey pair gets one, matching the page transition: the ink rides in front,
-          // so its shadow would fall on a surface already covered and paint nothing.
-          <div
-            key={`${tint}-${exit}`}
-            aria-hidden
-            className="absolute inset-0"
-            style={shade ? { filter: STEP_SHADOW } : undefined}
-          >
-          <motion.div
-            style={{
-              clipPath: clip,
-              WebkitClipPath: clip,
-              backgroundColor: tint,
-              willChange: "transform",
-            }}
-            className="absolute inset-0"
-            animate={{ y: split ? exit : 0 }}
-            transition={{
-              duration: SPLIT_MS / 1000,
-              ease: EASE_SPLIT,
-              delay: split ? lag / 1000 : 0,
-            }}
-          />
-          </div>
-        )),
+        { tint: STEP, lag: LAYER_LAG_MS, shadow: STEP_SHADOW }, // layer 2 — grey, trails
+        { tint: "var(--color-ink)", lag: 0, shadow: "none" }, // layer 1 — ink, leads
+      ].map(({ tint, lag, shadow }) =>
+        Array.from({ length: N }, (_, i) => {
+          const cut = splitAt(i);
+          const delay = split ? (lag + stepDelay(i)) / 1000 : 0;
+          const box = {
+            left: `${(i * 100) / N}%`,
+            width: `${100 / N}%`,
+            backgroundColor: tint,
+            boxShadow: shadow,
+            willChange: "transform",
+          } as const;
+          const move = {
+            duration: SPLIT_MS / 1000,
+            ease: EASE_SPLIT,
+            delay,
+          };
+          // Each column parts at its own step height, the halves overlapping by SEAM so their
+          // anti-aliased edges cannot leave a hairline of the page showing between them.
+          return (
+            <div key={`${tint}-${i}`} aria-hidden>
+              <motion.div
+                className="absolute top-0"
+                style={{ ...box, height: `${cut + SEAM}%` }}
+                animate={{ y: split ? "-110%" : 0 }}
+                transition={move}
+              />
+              <motion.div
+                className="absolute bottom-0"
+                style={{ ...box, height: `${100 - cut}%` }}
+                animate={{ y: split ? "110%" : 0 }}
+                transition={move}
+              />
+            </div>
+          );
+        }),
       )}
 
       {/* solid orange staircase — wipes in; on split it vanishes instantly (no retract) */}
